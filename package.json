@@ -43,9 +43,14 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "type": "distribution",
+      "identity": "Developer ID Application: GoIcon, LLC"
     },
     "afterSign": "scripts/notarize.js",
+    "dmg": {
+      "sign": false
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
