@@ -1,0 +1,54 @@
+Microsoft SmartScreen Submission - Quick Reference
+====================================================
+
+COPY THIS INFORMATION FOR YOUR SUBMISSION:
+
+Application Name:
+TrueSpan Living
+
+Company Name:
+VoiceFriend, LLC
+
+Product Version:
+1.0.0
+
+File to Upload:
+C:\Users\ryanm\Coding Local\Truespan\dist\TrueSpan Living Setup 1.0.0.exe
+
+Submission Type:
+☑ I think this file is clean (False Positive)
+
+Description (copy this):
+---
+This is a legitimate business application installer for TrueSpan Living, digitally signed with an Extended Validation (EV) code signing certificate from SSL.com. The application is showing SmartScreen warnings despite being properly signed with a valid certificate.
+
+Certificate Information:
+- Subject: CN="VoiceFriend, LLC", O=Icon, L=Boston, ST=Massachusetts, C=US
+- Issuer: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp
+- Certificate Type: Extended Validation (EV) Code Signing
+- Valid Until: October 14, 2027
+- Certificate Status: Valid and Trusted
+
+We request review for SmartScreen allowlist to properly reflect our valid EV certificate signature.
+---
+
+Contact Information:
+Your Email: [YOUR SUPPORT EMAIL]
+Website: [YOUR WEBSITE]
+
+Additional Notes:
+- EV certificate issued today (October 14, 2025)
+- All files properly signed and timestamped
+- Certificate chain verified and trusted by Windows
+- Application is legitimate business software
+
+====================================================
+
+IMPORTANT: After submitting, you should receive:
+1. Confirmation email from Microsoft
+2. Case number for tracking
+3. Response within 2-5 business days
+
+Keep checking SmartScreen status every few days to see improvement!
+
+

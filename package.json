@@ -1,0 +1,62 @@
+{
+  "name": "truespan-desktop",
+  "version": "1.0.0",
+  "description": "TrueSpan Living Desktop Application - Website Wrapper with Custom Authentication",
+  "author": {
+    "name": "TrueSpan Living",
+    "email": "support@truespanliving.com"
+  },
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "dist": "electron-builder --publish=never"
+  },
+  "build": {
+    "appId": "com.truespanliving.desktop",
+    "productName": "TrueSpan Living",
+    "copyright": "Copyright © 2024 TrueSpan Living",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/logo.png",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "signDlls": true,
+      "sign": "./sign.js"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/logo.png",
+      "category": "public.app-category.business",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "afterSign": "scripts/notarize.js",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "@electron/notarize": "^3.1.0",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "keytar": "^7.9.0"
+  }
+}

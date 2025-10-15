@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truespan - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1C1463 0%, #1C42FF 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbars */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #888 #f1f1f1;
+        }
+
+        *::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        *::-webkit-scrollbar-corner {
+            background: #f1f1f1;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo img {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .logo h1 {
+            color: #1C1463;
+            font-size: 28px;
+            font-weight: 300;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #1C42FF;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.2);
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #1C1463 0%, #1C42FF 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .auto-login-message {
+            color: #1C42FF;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+            background: rgba(28, 66, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(28, 66, 255, 0.3);
+        }
+
+        .auto-login-message .spinner {
+            border-top-color: #1C42FF;
+        }
+
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #1C42FF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <img src="../assets/logo-big-login-page.png" alt="TrueSpan Living" onerror="this.style.display='none';" />
+            <h1>TrueSpan Living</h1>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="rememberMe" name="rememberMe">
+                <label for="rememberMe">Remember me</label>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                Sign In
+            </button>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span>
+                Signing in...
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="auto-login-message" id="autoLoginMessage">
+                <span class="spinner"></span>
+                Signing in automatically...
+                <br>
+                <a href="#" id="cancelAutoLogin" style="color: #1C42FF; text-decoration: underline; font-size: 12px; margin-top: 5px; display: inline-block;">Use different account</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        let autoLoginTimeout = null;
+
+        // Load stored credentials on startup
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('Login page loaded');
+            
+            try {
+                // Check if user was logged out (don't auto-login if they manually logged out)
+                const wasLoggedOut = await ipcRenderer.invoke('was-logged-out');
+                
+                const storedCreds = await ipcRenderer.invoke('get-stored-credentials');
+                if (storedCreds.username && storedCreds.password && !wasLoggedOut) {
+                    console.log('Found stored credentials, auto-logging in...');
+                    
+                    // Fill in the form
+                    document.getElementById('username').value = storedCreds.username;
+                    document.getElementById('password').value = storedCreds.password;
+                    document.getElementById('rememberMe').checked = true;
+                    
+                    // Show auto-login message
+                    showAutoLoginMessage();
+                    
+                    // Auto-submit after a short delay
+                    autoLoginTimeout = setTimeout(() => {
+                        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+                    }, 2000); // 2 seconds to give user time to cancel
+                } else if (storedCreds.username) {
+                    // Only username stored, fill it but don't auto-login
+                    document.getElementById('username').value = storedCreds.username;
+                    document.getElementById('rememberMe').checked = true;
+                }
+            } catch (error) {
+                console.error('Error loading stored credentials:', error);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            if (!username || !password) {
+                showError('Please enter both username and password');
+                return;
+            }
+
+            setLoading(true);
+            hideError();
+            hideAutoLoginMessage();
+
+            try {
+                const result = await ipcRenderer.invoke('login', {
+                    username,
+                    password,
+                    rememberMe
+                });
+
+                console.log('Login result received:', result);
+
+                if (result.success) {
+                    console.log('Login successful');
+                    // Login successful - main window will open and login window will close
+                } else {
+                    console.log('Login failed:', result);
+                    showError(result.error || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('An unexpected error occurred');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Handle remember me checkbox
+        document.getElementById('rememberMe').addEventListener('change', async (e) => {
+            if (!e.target.checked) {
+                // Clear stored credentials if unchecking remember me
+                try {
+                    await ipcRenderer.invoke('clear-stored-credentials');
+                } catch (error) {
+                    console.error('Error clearing credentials:', error);
+                }
+            }
+        });
+
+        function setLoading(loading) {
+            const loginBtn = document.getElementById('loginBtn');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (loading) {
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Signing In...';
+                loadingDiv.style.display = 'block';
+            } else {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = 'none';
+        }
+
+        function showAutoLoginMessage() {
+            const autoLoginDiv = document.getElementById('autoLoginMessage');
+            autoLoginDiv.style.display = 'block';
+            
+            // Hide other messages
+            hideError();
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function hideAutoLoginMessage() {
+            const autoLoginDiv = document.getElementById('autoLoginMessage');
+            autoLoginDiv.style.display = 'none';
+        }
+
+
+        // Handle cancel auto-login
+        document.getElementById('cancelAutoLogin').addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Cancel the auto-login timeout
+            if (autoLoginTimeout) {
+                clearTimeout(autoLoginTimeout);
+                autoLoginTimeout = null;
+            }
+            
+            // Hide auto-login message
+            hideAutoLoginMessage();
+            
+            // Clear the password field so user can enter manually
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+        });
+
+        // Handle Enter key on password field
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>
