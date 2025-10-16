@@ -1,6 +1,6 @@
 # New EV Certificate Setup Steps
 
-## Your New EV Certificate Info:
+## Your New EV Certificate Info!
 - **Order Reference**: co-341ket12k37
 - **Issued**: 2025-10-15 12:30:42
 - **Type**: Extended Validation (EV) Code Signing
