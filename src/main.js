@@ -7,10 +7,61 @@ const config = require('./config');
 let mainWindow;
 let loginWindow;
 let isLoggedOut = false; // Flag to track if user manually logged out
+let deeplinkingUrl; // Store deep link URL to open after login
 
 // Configuration from config.js
 const WEBSITE_URL = config.GOICON_API_URL;
 const SERVICE_NAME = config.APP_NAME;
+
+// Handle URLs from Universal Links (Mac) / App Links (Windows)
+function handleDeepLink(url) {
+  console.log('Deep link received:', url);
+  
+  // Handle goicon.com URLs
+  if (url.startsWith('https://goicon.com') || url.startsWith('https://api.goicon.com')) {
+    const targetUrl = url;
+    
+    console.log('Opening URL:', targetUrl);
+    
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      // App is running, navigate to URL
+      mainWindow.loadURL(targetUrl);
+      mainWindow.show();
+      mainWindow.focus();
+    } else if (loginWindow && !loginWindow.isDestroyed()) {
+      // Login window is open, store URL to open after login
+      deeplinkingUrl = targetUrl;
+      console.log('Stored URL to open after login:', deeplinkingUrl);
+    } else {
+      // App is starting, store URL to open after login
+      deeplinkingUrl = targetUrl;
+      console.log('Stored URL to open on launch:', deeplinkingUrl);
+    }
+  }
+}
+
+// Make app single instance
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is running, quit this one
+  app.quit();
+} else {
+  // Handle second instance (when user clicks a link while app is running)
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    
+    // The commandLine is an array, find the URL
+    const url = commandLine.find(arg => arg.startsWith('https://goicon.com') || arg.startsWith('https://api.goicon.com'));
+    if (url) {
+      handleDeepLink(url);
+    }
+  });
+}
 
 function createLoginWindow() {
   // Close existing login window if it exists
@@ -265,9 +316,16 @@ ipcMain.handle('login', async (event, { username, password, rememberMe }) => {
       // Reset logout flag since user successfully logged in
       isLoggedOut = false;
 
-      // Always redirect everyone to the social page
-      const targetUrl = 'https://api.goicon.com/social';
+      // Use deep link URL if available, otherwise default to social page
+      const targetUrl = deeplinkingUrl || 'https://api.goicon.com/social';
       console.log('Loading main window with URL:', targetUrl);
+      
+      // Clear deep link URL after using it
+      if (deeplinkingUrl) {
+        console.log('Using stored deep link URL:', deeplinkingUrl);
+        deeplinkingUrl = null;
+      }
+      
       createMainWindow(targetUrl);
       return { success: true, redirectUrl: targetUrl };
     } else {
@@ -571,6 +629,14 @@ async function setCookiesInSession(cookies) {
 }
 
 app.whenReady().then(async () => {
+  // Check for URL on launch (Windows)
+  if (process.platform === 'win32') {
+    const url = process.argv.find(arg => arg.startsWith('https://goicon.com') || arg.startsWith('https://api.goicon.com'));
+    if (url) {
+      handleDeepLink(url);
+    }
+  }
+  
   // Check if user has stored credentials
   const storedCreds = await keytar.getPassword(SERVICE_NAME, 'last_username');
   
@@ -581,6 +647,12 @@ app.whenReady().then(async () => {
     // Show login window
     createLoginWindow();
   }
+});
+
+// Handle deep links on Mac
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
 });
 
 app.on('window-all-closed', () => {
