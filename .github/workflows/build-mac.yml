@@ -33,7 +33,7 @@ jobs:
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
         
         # Import certificate
-        echo "$APPLE_CERT_DATA" | base64 --decode > certificate.p12
+        printf "%s" "$APPLE_CERT_DATA" | base64 --decode > certificate.p12
         security import certificate.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
         
