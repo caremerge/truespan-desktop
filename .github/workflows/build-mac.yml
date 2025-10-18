@@ -45,7 +45,8 @@ jobs:
         echo "Testing password with openssl..."
         openssl pkcs12 -info -in certificate.p12 -noout -passin pass:"$APPLE_CERT_PASSWORD" || echo "Password test failed!"
         
-        security import certificate.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+        # Import to keychain - try without quotes around password
+        security import certificate.p12 -k build.keychain -P $APPLE_CERT_PASSWORD -T /usr/bin/codesign -A
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
         
         # Cleanup
