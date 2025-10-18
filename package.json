@@ -38,7 +38,7 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/logo-big-login-page.png",
+      "icon": "assets/logo-1024.png",
       "category": "public.app-category.business",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,

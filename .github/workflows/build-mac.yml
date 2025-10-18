@@ -21,6 +21,17 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
+    - name: Create proper macOS icon
+      run: |
+        # Install imagemagick for image processing
+        brew install imagemagick
+        
+        # Create a 1024x1024 icon from the existing logo
+        magick assets/logo.png -background white -gravity center -extent 1024x1024 assets/logo-1024.png
+        
+        echo "Created 1024x1024 icon"
+        ls -lh assets/logo-1024.png
+    
     - name: Import Apple certificates
       env:
         APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
