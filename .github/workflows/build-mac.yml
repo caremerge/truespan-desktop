@@ -33,7 +33,18 @@ jobs:
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
         
         # Import certificate
-        echo "$APPLE_CERT_DATA" | tr -d '\n\r\t ' | base64 --decode > certificate.p12
+        echo "$APPLE_CERT_DATA" > cert_base64.txt
+        base64 --decode -i cert_base64.txt -o certificate.p12
+        
+        # Debug: Check if decode worked
+        echo "Certificate file size:"
+        ls -lh certificate.p12
+        echo "Expected size: ~3.2KB"
+        
+        # Test password locally before importing
+        echo "Testing password with openssl..."
+        openssl pkcs12 -info -in certificate.p12 -noout -passin pass:"$APPLE_CERT_PASSWORD" || echo "Password test failed!"
+        
         security import certificate.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
         
