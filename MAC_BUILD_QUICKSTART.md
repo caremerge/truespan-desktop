@@ -27,7 +27,7 @@ After Apple approval:
    - **Problem**: Normally done on Mac
    - **Solution**: Use online tool or ask someone with a Mac
 
-**Alternative**: Use the certificate creation tool in GitHub Actions (advanced)
+**Alternative**: Use the  certificate creation tool in GitHub Actions (advanced)
 
 ### Step 3: Create App-Specific Password
 
