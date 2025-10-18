@@ -45,8 +45,14 @@ jobs:
         echo "Testing password with openssl..."
         openssl pkcs12 -info -in certificate.p12 -noout -passin pass:"$APPLE_CERT_PASSWORD" || echo "Password test failed!"
         
-        # Import to keychain - try without quotes around password
-        security import certificate.p12 -k build.keychain -P $APPLE_CERT_PASSWORD -T /usr/bin/codesign -A
+        # Repackage the .p12 using OpenSSL to fix any format issues
+        echo "Repackaging certificate for macOS compatibility..."
+        openssl pkcs12 -in certificate.p12 -clcerts -nokeys -out cert.pem -passin pass:"$APPLE_CERT_PASSWORD" -passout pass:temp
+        openssl pkcs12 -in certificate.p12 -nocerts -nodes -out key.pem -passin pass:"$APPLE_CERT_PASSWORD"
+        openssl pkcs12 -export -out new_certificate.p12 -inkey key.pem -in cert.pem -passout pass:"$APPLE_CERT_PASSWORD" -legacy
+        
+        # Import the repackaged certificate
+        security import new_certificate.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign -A
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
         
         # Cleanup
