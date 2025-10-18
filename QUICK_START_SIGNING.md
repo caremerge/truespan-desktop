@@ -2,7 +2,7 @@
 
 ## What You Need (From Your eSigner Portal):
 
-1. ✅ Your **eSigner.com email** (username)
+1. ✅ Your **eSigner.com email** (username )
 2. ✅ Your **eSigner.com password**
 3. ✅ **Secret code** - Copy from the text box in your eSigner portal (visible in your screenshot)
 4. ✅ **Credential ID** - Click "SHOW MY SIGNING CREDENTIALS" to find this
