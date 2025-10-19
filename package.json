@@ -46,6 +46,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "type": "distribution",
       "identity": "Go Icon LLC",
+      "notarize": false,
       "extendInfo": {
         "CFBundleURLTypes": [{
           "CFBundleURLSchemes": ["https"],
