@@ -37,11 +37,9 @@
       "sign": "./sign.js"
     },
     "mac": {
-      "target": {
-        "target": "dmg",
-        "arch": ["x64", "arm64"]
-      },
+      "target": "dmg",
       "icon": "assets/icon.png",
+      "arch": "universal",
       "category": "public.app-category.business",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
