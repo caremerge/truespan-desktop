@@ -29,7 +29,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/logo.png",
+      "icon": "assets/icon.ico",
       "signingHashAlgorithms": [
         "sha256"
       ],
@@ -37,8 +37,11 @@
       "sign": "./sign.js"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "assets/logo-1024.png",
+      "target": {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      "icon": "assets/icon.png",
       "category": "public.app-category.business",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -59,7 +62,27 @@
     },
     "afterSign": "scripts/notarize.js",
     "dmg": {
-      "sign": false
+      "sign": false,
+      "title": "TrueSpan Living ${version}",
+      "icon": "assets/icon.png",
+      "background": null,
+      "contents": [
+        {
+          "x": 130,
+          "y": 220,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
     },
     "nsis": {
       "oneClick": false,

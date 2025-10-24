@@ -25,9 +25,13 @@ function handleDeepLink(url) {
     
     if (mainWindow && !mainWindow.isDestroyed()) {
       // App is running, navigate to URL
-      mainWindow.loadURL(targetUrl);
-      mainWindow.show();
-      mainWindow.focus();
+      try {
+        mainWindow.loadURL(targetUrl);
+        mainWindow.show();
+        mainWindow.focus();
+      } catch (err) {
+        console.error('Error loading deep link in main window:', err);
+      }
     } else if (loginWindow && !loginWindow.isDestroyed()) {
       // Login window is open, store URL to open after login
       deeplinkingUrl = targetUrl;
@@ -65,10 +69,10 @@ if (!gotTheLock) {
 
 function createLoginWindow() {
   // Close existing login window if it exists
-  if (loginWindow) {
+  if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.close();
-    loginWindow = null;
   }
+  loginWindow = null;
 
   loginWindow = new BrowserWindow({
     width: config.LOGIN_WINDOW.width,
@@ -82,13 +86,13 @@ function createLoginWindow() {
     maximizable: false,
     show: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, '../assets/logo.png')
+    icon: path.join(__dirname, '../assets/icon.png')
   });
 
   loginWindow.loadFile('src/login.html');
 
   loginWindow.once('ready-to-show', () => {
-    if (loginWindow) {
+    if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.show();
     }
   });
@@ -103,10 +107,10 @@ function createLoginWindow() {
 
 function createLoginWindowWithError(errorMessage) {
   // Close existing login window if it exists
-  if (loginWindow) {
+  if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.close();
-    loginWindow = null;
   }
+  loginWindow = null;
 
   loginWindow = new BrowserWindow({
     width: config.LOGIN_WINDOW.width,
@@ -120,18 +124,18 @@ function createLoginWindowWithError(errorMessage) {
     maximizable: false,
     show: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, '../assets/logo.png')
+    icon: path.join(__dirname, '../assets/icon.png')
   });
 
   loginWindow.loadFile('src/login.html');
 
   loginWindow.once('ready-to-show', () => {
-    if (loginWindow) {
+    if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.show();
       
       // Show the error message after the window is ready
       setTimeout(() => {
-        if (loginWindow && loginWindow.webContents) {
+        if (loginWindow && !loginWindow.isDestroyed() && loginWindow.webContents) {
           loginWindow.webContents.executeJavaScript(`
             if (typeof showError === 'function') {
               showError('${errorMessage.replace(/'/g, "\\'")}');
@@ -164,7 +168,7 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
     },
     show: false,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, '../assets/logo.png')
+    icon: path.join(__dirname, '../assets/icon.png')
   });
 
   // Load the target URL (either redirect URL or default website)
@@ -172,6 +176,11 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
   mainWindow.loadURL(targetUrl);
 
   mainWindow.webContents.on('did-finish-load', () => {
+    // Check if window still exists (race condition protection)
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return;
+    }
+    
     // Inject custom scrollbar CSS after page loads
     mainWindow.webContents.insertCSS(`
       /* Custom Scrollbars for Main Window */
@@ -227,8 +236,11 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
   });
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    if (loginWindow) {
+    // Check if window still exists (race condition protection)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+    }
+    if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.close();
     }
   });
@@ -258,13 +270,20 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
       isLoggedOut = true;
       
       // Hide main window and show our login with error message
-      mainWindow.hide();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.hide();
+      }
       createLoginWindowWithError('Session expired or you have been logged out. Please log in again.');
     }
   });
 
   // Also monitor when the page finishes loading to catch login redirects
   mainWindow.webContents.on('did-finish-load', () => {
+    // Check if window still exists
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return;
+    }
+    
     const currentUrl = mainWindow.webContents.getURL();
     console.log('Page finished loading:', currentUrl);
     
@@ -277,7 +296,9 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
       // Set logout flag to prevent auto-login
       isLoggedOut = true;
       
-      mainWindow.hide();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.hide();
+      }
       createLoginWindowWithError('Session expired or you have been logged out. Please log in again.');
     }
   });
@@ -308,10 +329,10 @@ ipcMain.handle('login', async (event, { username, password, rememberMe }) => {
       }
 
       // Close existing main window if it exists (in case of re-login)
-      if (mainWindow) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.close();
-        mainWindow = null;
       }
+      mainWindow = null;
 
       // Reset logout flag since user successfully logged in
       isLoggedOut = false;
@@ -389,6 +410,11 @@ async function authenticateUser(username, password) {
     authWindow.loadURL('https://login.goicon.com/login/');
 
     authWindow.webContents.once('did-finish-load', () => {
+      // Check if auth window still exists
+      if (!authWindow || authWindow.isDestroyed()) {
+        return;
+      }
+      
       // Inject the login form submission
       const jsCode = `
         // Fill in the form
@@ -439,7 +465,9 @@ async function authenticateUser(username, password) {
       
       authWindow.webContents.executeJavaScript(jsCode).then(async (formFound) => {
         if (!formFound) {
-          authWindow.close();
+          if (authWindow && !authWindow.isDestroyed()) {
+            authWindow.close();
+          }
           resolve({
             success: false,
             error: 'Could not find login form'
@@ -540,7 +568,9 @@ async function authenticateUser(username, password) {
               }
             ];
 
-            authWindow.close();
+            if (authWindow && !authWindow.isDestroyed()) {
+              authWindow.close();
+            }
 
             if (goIconCookies.length > 0) {
               resolve({
@@ -559,7 +589,9 @@ async function authenticateUser(username, password) {
             }
           } catch (error) {
             console.error('Authentication error:', error);
-            authWindow.close();
+            if (authWindow && !authWindow.isDestroyed()) {
+              authWindow.close();
+            }
             resolve({
               success: false,
               error: 'Authentication failed'
@@ -567,7 +599,9 @@ async function authenticateUser(username, password) {
           }
         }, 1500); // Wait 1.5 seconds for login to process
       }).catch((error) => {
-        authWindow.close();
+        if (authWindow && !authWindow.isDestroyed()) {
+          authWindow.close();
+        }
         resolve({
           success: false,
           error: 'Could not execute login script'
@@ -576,7 +610,9 @@ async function authenticateUser(username, password) {
     });
 
     authWindow.webContents.on('did-fail-load', () => {
-      authWindow.close();
+      if (authWindow && !authWindow.isDestroyed()) {
+        authWindow.close();
+      }
       resolve({
         success: false,
         error: 'Could not load login page'
