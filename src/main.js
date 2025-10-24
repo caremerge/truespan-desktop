@@ -1,6 +1,16 @@
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
-const keytar = require('keytar');
+
+// Try to load keytar, but make it optional
+let keytar;
+try {
+  keytar = require('keytar');
+  console.log('✅ Keytar loaded successfully');
+} catch (error) {
+  console.warn('⚠️  Keytar not available:', error.message);
+  console.warn('   "Remember Me" feature will be disabled');
+}
+
 const config = require('./config');
 
 // Keep a global reference of the window objects
@@ -318,7 +328,7 @@ ipcMain.handle('login', async (event, { username, password, rememberMe }) => {
     
     if (authResult.success) {
       // Store credentials if remember me is checked
-      if (rememberMe) {
+      if (rememberMe && keytar) {
         await keytar.setPassword(SERVICE_NAME, username, password);
         await keytar.setPassword(SERVICE_NAME, 'last_username', username);
       }
@@ -361,6 +371,9 @@ ipcMain.handle('login', async (event, { username, password, rememberMe }) => {
 // Get stored credentials
 ipcMain.handle('get-stored-credentials', async () => {
   try {
+    if (!keytar) {
+      return { username: '', password: '' };
+    }
     const lastUsername = await keytar.getPassword(SERVICE_NAME, 'last_username');
     if (lastUsername) {
       const password = await keytar.getPassword(SERVICE_NAME, lastUsername);
@@ -376,6 +389,9 @@ ipcMain.handle('get-stored-credentials', async () => {
 // Clear stored credentials
 ipcMain.handle('clear-stored-credentials', async () => {
   try {
+    if (!keytar) {
+      return;
+    }
     const lastUsername = await keytar.getPassword(SERVICE_NAME, 'last_username');
     if (lastUsername) {
       await keytar.deletePassword(SERVICE_NAME, lastUsername);
@@ -673,16 +689,18 @@ app.whenReady().then(async () => {
     }
   }
   
-  // Check if user has stored credentials
-  const storedCreds = await keytar.getPassword(SERVICE_NAME, 'last_username');
-  
-  if (storedCreds) {
-    // Show login window with stored credentials
-    createLoginWindow();
-  } else {
-    // Show login window
-    createLoginWindow();
+  // Check if user has stored credentials (if keytar is available)
+  let storedCreds = null;
+  if (keytar) {
+    try {
+      storedCreds = await keytar.getPassword(SERVICE_NAME, 'last_username');
+    } catch (error) {
+      console.warn('Could not check stored credentials:', error);
+    }
   }
+  
+  // Show login window (with or without stored credentials)
+  createLoginWindow();
 });
 
 // Handle deep links on Mac
