@@ -27,6 +27,9 @@
       "assets/**/*",
       "node_modules/**/*"
     ],
+    "asarUnpack": [
+      "node_modules/keytar/**/*"
+    ],
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
