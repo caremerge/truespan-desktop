@@ -1,0 +1,149 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=v1.0.0-dev" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: TrueSpan Living ${{ steps.get_version.outputs.version }}
+          body: |
+            ## TrueSpan Living Desktop Application
+            
+            ### Downloads
+            - **macOS** (Universal - Intel & Apple Silicon): `TrueSpan Living-${{ steps.get_version.outputs.version }}-universal.dmg`
+            - **Windows**: `TrueSpan Living Setup ${{ steps.get_version.outputs.version }}.exe`
+            
+            ### Changes
+            - ✅ Cross-platform desktop application
+            - ✅ Properly signed and notarized
+            - ✅ Universal macOS binary
+            
+            ### Installation
+            
+            **macOS:**
+            1. Download the DMG file
+            2. Open and drag app to Applications or Desktop
+            3. First launch: Right-click → Open (to bypass Gatekeeper)
+            
+            **Windows:**
+            1. Download the Setup.exe file
+            2. Run the installer
+            3. Follow installation wizard
+          draft: false
+          prerelease: false
+
+  build-mac:
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Verify icon files
+        run: ls -lh assets/icon.png assets/icon.ico
+      
+      - name: Import Apple certificates
+        env:
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          
+          echo "$APPLE_CERT_DATA" > cert_base64.txt
+          base64 --decode -i cert_base64.txt -o certificate.p12
+          
+          openssl pkcs12 -in certificate.p12 -clcerts -nokeys -out cert.pem -passin pass:"$APPLE_CERT_PASSWORD"
+          openssl pkcs12 -in certificate.p12 -nocerts -nodes -out key.pem -passin pass:"$APPLE_CERT_PASSWORD"
+          openssl pkcs12 -export -out new_certificate.p12 -inkey key.pem -in cert.pem -passout pass:"$APPLE_CERT_PASSWORD" -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
+          
+          security import new_certificate.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          
+          rm certificate.p12
+      
+      - name: Build and sign macOS app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run build:mac -- --publish never
+      
+      - name: Upload DMG to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./dist/TrueSpan Living-1.0.0-universal.dmg
+          asset_name: TrueSpan-Living-${{ needs.create-release.outputs.version }}-universal.dmg
+          asset_content_type: application/x-apple-diskimage
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup eSigner credentials
+        run: |
+          echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
+          echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
+          echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
+          echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
+      
+      - name: Build Windows app
+        run: npm run build:win
+      
+      - name: Upload Windows Installer to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./dist/TrueSpan Living Setup 1.0.0.exe
+          asset_name: TrueSpan-Living-Setup-${{ needs.create-release.outputs.version }}.exe
+          asset_content_type: application/x-msdownload
+
