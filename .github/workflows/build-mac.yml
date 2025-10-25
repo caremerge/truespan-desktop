@@ -36,6 +36,18 @@ jobs:
     - name: Reinstall dependencies after clean
       run: npm ci
     
+    - name: Check system dependencies
+      run: |
+        echo "Checking system dependencies..."
+        xcode-select --version || echo "Xcode command line tools not found"
+        node --version
+        npm --version
+        echo "Checking for required system libraries..."
+        otool -L /usr/lib/libc++.1.dylib || echo "libc++ not found"
+        echo "System info:"
+        uname -a
+        sw_vers
+    
     - name: Import Apple certificates
       env:
         APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
@@ -87,6 +99,14 @@ jobs:
         echo "Verifying app structure..."
         find dist -name "*.app" -exec echo "Found app: {}" \;
         find dist -name "*.app" -exec ls -la {}/Contents/MacOS/ \;
+        
+        # Test if the app can run
+        echo "Testing app execution..."
+        APP_PATH=$(find dist -name "*.app" -type d | head -1)
+        if [ -n "$APP_PATH" ]; then
+          echo "Testing app at: $APP_PATH"
+          timeout 10s "$APP_PATH/Contents/MacOS/TrueSpan Living" || echo "App test failed or timed out"
+        fi
     
     - name: Verify built app
       run: |
