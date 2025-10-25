@@ -76,6 +76,13 @@ jobs:
       - name: Verify icon files
         run: ls -lh assets/icon.png assets/icon.ico
       
+      - name: Clean previous builds
+        run: |
+          echo "Cleaning dist folder and build cache..."
+          rm -rf dist
+          rm -rf node_modules/.cache
+          echo "Clean complete"
+      
       - name: Import Apple certificates
         env:
           APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
@@ -105,6 +112,34 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npm run build:mac -- --publish never
+      
+      - name: Verify built app
+        run: |
+          echo "Verifying built application..."
+          
+          APP_PATH=$(find dist -name "*.app" -type d | head -1)
+          echo "Found app at: $APP_PATH"
+          
+          ls -lh "$APP_PATH/Contents/Info.plist"
+          
+          npx asar extract "$APP_PATH/Contents/Resources/app.asar" /tmp/app-verify
+          echo "Checking dependencies in built app:"
+          cat /tmp/app-verify/package.json | grep -A 5 '"dependencies"'
+          
+          if grep -q "keytar" /tmp/app-verify/package.json; then
+            echo "❌ ERROR: keytar found in built app!"
+            exit 1
+          else
+            echo "✅ Verified: keytar is not in built app"
+          fi
+          
+          echo "Checking for native modules:"
+          find "$APP_PATH" -name "*.node" || echo "No .node files found (good)"
+          
+          codesign -vvv "$APP_PATH"
+          spctl -a -vvv "$APP_PATH"
+          
+          echo "✅ App verification complete"
       
       - name: Upload DMG to Release
         uses: actions/upload-release-asset@v1
