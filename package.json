@@ -94,7 +94,5 @@
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4"
   },
-  "dependencies": {
-    "keytar": "^7.9.0"
-  }
+  "dependencies": {}
 }
