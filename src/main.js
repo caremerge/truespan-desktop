@@ -321,18 +321,12 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
 }
 
 // Handle login form submission
-ipcMain.handle('login', async (event, { username, password, rememberMe }) => {
+ipcMain.handle('login', async (event, { username, password }) => {
   try {
     // Call your auth API here
     const authResult = await authenticateUser(username, password);
     
     if (authResult.success) {
-      // Store credentials if remember me is checked
-      if (rememberMe && keytar) {
-        await keytar.setPassword(SERVICE_NAME, username, password);
-        await keytar.setPassword(SERVICE_NAME, 'last_username', username);
-      }
-
       // Set cookies/session data in the main window's session
       if (authResult.cookies) {
         await setCookiesInSession(authResult.cookies);

@@ -244,36 +244,29 @@
     <script>
         const { ipcRenderer } = require('electron');
 
-        let autoLoginTimeout = null;
-
-        // Load stored credentials on startup
+        // Load stored credentials on startup (localStorage-based)
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('Login page loaded');
             
             try {
-                // Check if user was logged out (don't auto-login if they manually logged out)
-                const wasLoggedOut = await ipcRenderer.invoke('was-logged-out');
+                // Load credentials from localStorage
+                const storedUsername = localStorage.getItem('truespanUsername');
+                const storedPassword = localStorage.getItem('truespanPassword');
                 
-                const storedCreds = await ipcRenderer.invoke('get-stored-credentials');
-                if (storedCreds.username && storedCreds.password && !wasLoggedOut) {
-                    console.log('Found stored credentials, auto-logging in...');
+                if (storedUsername) {
+                    console.log('Found stored credentials, pre-filling form...');
                     
-                    // Fill in the form
-                    document.getElementById('username').value = storedCreds.username;
-                    document.getElementById('password').value = storedCreds.password;
+                    // Pre-fill the form fields
+                    document.getElementById('username').value = storedUsername;
+                    if (storedPassword) {
+                        document.getElementById('password').value = storedPassword;
+                    }
                     document.getElementById('rememberMe').checked = true;
                     
-                    // Show auto-login message
-                    showAutoLoginMessage();
-                    
-                    // Auto-submit after a short delay
-                    autoLoginTimeout = setTimeout(() => {
-                        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-                    }, 2000); // 2 seconds to give user time to cancel
-                } else if (storedCreds.username) {
-                    // Only username stored, fill it but don't auto-login
-                    document.getElementById('username').value = storedCreds.username;
-                    document.getElementById('rememberMe').checked = true;
+                    // Focus password field if it's empty, otherwise focus Sign In button
+                    if (!storedPassword) {
+                        document.getElementById('password').focus();
+                    }
                 }
             } catch (error) {
                 console.error('Error loading stored credentials:', error);
@@ -298,10 +291,21 @@
             hideAutoLoginMessage();
 
             try {
+                // Save credentials to localStorage if "Remember Me" is checked
+                if (rememberMe) {
+                    localStorage.setItem('truespanUsername', username);
+                    localStorage.setItem('truespanPassword', password);
+                    console.log('Credentials saved to localStorage');
+                } else {
+                    // Clear stored credentials if not remembering
+                    localStorage.removeItem('truespanUsername');
+                    localStorage.removeItem('truespanPassword');
+                }
+
                 const result = await ipcRenderer.invoke('login', {
                     username,
                     password,
-                    rememberMe
+                    rememberMe: false  // Don't pass to backend since we handle it in frontend
                 });
 
                 console.log('Login result received:', result);
@@ -322,11 +326,13 @@
         });
 
         // Handle remember me checkbox
-        document.getElementById('rememberMe').addEventListener('change', async (e) => {
+        document.getElementById('rememberMe').addEventListener('change', (e) => {
             if (!e.target.checked) {
                 // Clear stored credentials if unchecking remember me
                 try {
-                    await ipcRenderer.invoke('clear-stored-credentials');
+                    localStorage.removeItem('truespanUsername');
+                    localStorage.removeItem('truespanPassword');
+                    console.log('Credentials cleared from localStorage');
                 } catch (error) {
                     console.error('Error clearing credentials:', error);
                 }
@@ -373,24 +379,6 @@
             autoLoginDiv.style.display = 'none';
         }
 
-
-        // Handle cancel auto-login
-        document.getElementById('cancelAutoLogin').addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Cancel the auto-login timeout
-            if (autoLoginTimeout) {
-                clearTimeout(autoLoginTimeout);
-                autoLoginTimeout = null;
-            }
-            
-            // Hide auto-login message
-            hideAutoLoginMessage();
-            
-            // Clear the password field so user can enter manually
-            document.getElementById('password').value = '';
-            document.getElementById('password').focus();
-        });
 
         // Handle Enter key on password field
         document.getElementById('password').addEventListener('keypress', (e) => {
