@@ -116,13 +116,40 @@ jobs:
         APP_PATH=$(find dist -name "*.app" -type d | head -1)
         echo "Found app at: $APP_PATH"
         
+        # Verify the complete app structure
+        echo "=== App Bundle Structure ==="
+        ls -la "$APP_PATH/Contents/"
+        echo ""
+        echo "=== MacOS Folder ==="
+        ls -la "$APP_PATH/Contents/MacOS/"
+        echo ""
+        echo "=== Resources Folder ==="
+        ls -la "$APP_PATH/Contents/Resources/" | head -20
+        echo ""
+        
         # Check Info.plist timestamp
         ls -lh "$APP_PATH/Contents/Info.plist"
         
+        # Verify the executable exists and is executable
+        EXECUTABLE="$APP_PATH/Contents/MacOS/TrueSpan Living"
+        if [ -f "$EXECUTABLE" ]; then
+          echo "✅ Executable exists"
+          ls -lh "$EXECUTABLE"
+          file "$EXECUTABLE"
+        else
+          echo "❌ Executable NOT found at: $EXECUTABLE"
+          exit 1
+        fi
+        
         # Extract and check package.json from app.asar
-        npx asar extract "$APP_PATH/Contents/Resources/app.asar" /tmp/app-verify
-        echo "Checking dependencies in built app:"
-        cat /tmp/app-verify/package.json | grep -A 5 '"dependencies"'
+        if [ -f "$APP_PATH/Contents/Resources/app.asar" ]; then
+          npx asar extract "$APP_PATH/Contents/Resources/app.asar" /tmp/app-verify
+          echo "Checking dependencies in built app:"
+          cat /tmp/app-verify/package.json | grep -A 5 '"dependencies"'
+        else
+          echo "❌ app.asar NOT found"
+          exit 1
+        fi
         
         # Verify keytar is NOT present
         if grep -q "keytar" /tmp/app-verify/package.json; then
