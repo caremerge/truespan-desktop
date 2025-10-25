@@ -279,10 +279,12 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
       // Set logout flag to prevent auto-login
       isLoggedOut = true;
       
-      // Hide main window and show our login with error message
+      // Properly close main window and clean up
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.hide();
+        mainWindow.close();
       }
+      mainWindow = null;
+      
       createLoginWindowWithError('Session expired or you have been logged out. Please log in again.');
     }
   });
@@ -306,9 +308,12 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
       // Set logout flag to prevent auto-login
       isLoggedOut = true;
       
+      // Properly close main window and clean up
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.hide();
+        mainWindow.close();
       }
+      mainWindow = null;
+      
       createLoginWindowWithError('Session expired or you have been logged out. Please log in again.');
     }
   });
@@ -404,7 +409,7 @@ ipcMain.handle('was-logged-out', async () => {
 // Function to authenticate user using a hidden webview (like your backend does)
 async function authenticateUser(username, password) {
   return new Promise((resolve) => {
-    // Create a hidden webview for authentication
+    // Create a hidden webview for authentication with a fresh session
     const authWindow = new BrowserWindow({
       width: 800,
       height: 600,
@@ -412,7 +417,8 @@ async function authenticateUser(username, password) {
       show: false, // Hidden window
       webPreferences: {
         nodeIntegration: false,
-        contextIsolation: true
+        contextIsolation: true,
+        partition: 'persist:auth-' + Date.now() // Use a fresh session partition
       }
     });
 
