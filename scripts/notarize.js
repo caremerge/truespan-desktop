@@ -1,7 +1,8 @@
-const { notarize } = require('@electron/notarize');
 const { execSync } = require('child_process');
 
 exports.default = async function notarizing(context) {
+  // Dynamic import for ES module compatibility
+  const { notarize } = await import('@electron/notarize');
   const { electronPlatformName, appOutDir } = context;
   
   // Only notarize on macOS
