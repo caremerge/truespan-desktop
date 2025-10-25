@@ -26,6 +26,13 @@ jobs:
         echo "Checking for icon files..."
         ls -lh assets/icon.png assets/icon.ico
     
+    - name: Clean previous builds
+      run: |
+        echo "Cleaning dist folder and build cache..."
+        rm -rf dist
+        rm -rf node_modules/.cache
+        echo "Clean complete"
+    
     - name: Import Apple certificates
       env:
         APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
@@ -71,6 +78,40 @@ jobs:
         CSC_IDENTITY_AUTO_DISCOVERY: false
       run: |
         npm run build:mac -- --publish never
+    
+    - name: Verify built app
+      run: |
+        echo "Verifying built application..."
+        
+        # Find the built .app (it's in the dist folder before DMG is created)
+        APP_PATH=$(find dist -name "*.app" -type d | head -1)
+        echo "Found app at: $APP_PATH"
+        
+        # Check Info.plist timestamp
+        ls -lh "$APP_PATH/Contents/Info.plist"
+        
+        # Extract and check package.json from app.asar
+        npx asar extract "$APP_PATH/Contents/Resources/app.asar" /tmp/app-verify
+        echo "Checking dependencies in built app:"
+        cat /tmp/app-verify/package.json | grep -A 5 '"dependencies"'
+        
+        # Verify keytar is NOT present
+        if grep -q "keytar" /tmp/app-verify/package.json; then
+          echo "❌ ERROR: keytar found in built app!"
+          exit 1
+        else
+          echo "✅ Verified: keytar is not in built app"
+        fi
+        
+        # Check for any .node files
+        echo "Checking for native modules:"
+        find "$APP_PATH" -name "*.node" || echo "No .node files found (good)"
+        
+        # Verify code signature
+        codesign -vvv "$APP_PATH"
+        spctl -a -vvv "$APP_PATH"
+        
+        echo "✅ App verification complete"
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
