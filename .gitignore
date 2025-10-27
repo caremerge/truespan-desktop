@@ -59,12 +59,16 @@ certs/
 *.pfx
 *.p12
 *.pem
+*.key
+*.cer
 apple-cert-base64.txt
 apple-cert-base64-clean.txt
 app_specific_password
 GITHUB_SECRETS_EXACT_VALUES.txt
 mac env.txt
 CertificateSigningRequest-certSigningRequest
+apple-dev-private-key.key
+developerID_application.cer
 
 # Electron build cache
 .electron-builder-cache/
