@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, dialog } = require('electron');
 const path = require('path');
+const { autoUpdater } = require('electron-updater');
 
 // Try to load keytar, but make it optional
 let keytar;
@@ -18,10 +19,91 @@ let mainWindow;
 let loginWindow;
 let isLoggedOut = false; // Flag to track if user manually logged out
 let deeplinkingUrl; // Store deep link URL to open after login
+let isAuthenticating = false; // Flag to prevent duplicate login processing
 
 // Configuration from config.js
 const WEBSITE_URL = config.GOICON_API_URL;
 const SERVICE_NAME = config.APP_NAME;
+
+// Configure auto-updater
+const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+autoUpdater.autoDownload = false; // Don't auto-download, ask user first
+autoUpdater.autoInstallOnAppQuit = true;
+
+// Log updater events
+autoUpdater.logger = require('electron-log');
+autoUpdater.logger.transports.file.level = 'info';
+
+console.log('App starting... isDev:', isDev);
+
+// Auto-updater event handlers
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for updates...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info.version);
+  
+  const window = mainWindow || loginWindow;
+  if (window && !window.isDestroyed()) {
+    dialog.showMessageBox(window, {
+      type: 'info',
+      title: 'Update Available',
+      message: `A new version (${info.version}) is available!`,
+      detail: 'Would you like to download it now? The app will continue to work while downloading.',
+      buttons: ['Download Update', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.downloadUpdate();
+      }
+    });
+  }
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('Update not available. Current version is the latest.');
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+  console.log(log_message);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info.version);
+  
+  const window = mainWindow || loginWindow;
+  if (window && !window.isDestroyed()) {
+    dialog.showMessageBox(window, {
+      type: 'info',
+      title: 'Update Ready',
+      message: 'Update has been downloaded successfully!',
+      detail: 'The app will restart to install the update. All your work will be saved.',
+      buttons: ['Restart Now', 'Restart Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        // Close windows gracefully before updating
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.removeAllListeners('close');
+        }
+        if (loginWindow && !loginWindow.isDestroyed()) {
+          loginWindow.removeAllListeners('close');
+        }
+        
+        setImmediate(() => autoUpdater.quitAndInstall(false, true));
+      }
+    });
+  }
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('Auto-updater error:', err);
+  // Don't show error dialog to users unless they explicitly checked for updates
+});
 
 // Handle URLs from Universal Links (Mac) / App Links (Windows)
 function handleDeepLink(url) {
@@ -327,6 +409,14 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
 
 // Handle login form submission
 ipcMain.handle('login', async (event, { username, password }) => {
+  // Prevent duplicate login processing
+  if (isAuthenticating) {
+    console.log('Login already in progress, ignoring duplicate request');
+    return { success: false, error: 'Login already in progress' };
+  }
+
+  isAuthenticating = true;
+  
   try {
     // Call your auth API here
     const authResult = await authenticateUser(username, password);
@@ -364,6 +454,9 @@ ipcMain.handle('login', async (event, { username, password }) => {
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, error: 'Authentication failed' };
+  } finally {
+    // Reset the flag to allow future login attempts
+    isAuthenticating = false;
   }
 });
 
@@ -701,6 +794,16 @@ app.whenReady().then(async () => {
   
   // Show login window (with or without stored credentials)
   createLoginWindow();
+  
+  // Check for updates after login window is ready (only in production)
+  if (!isDev) {
+    setTimeout(() => {
+      console.log('Checking for app updates...');
+      autoUpdater.checkForUpdates().catch(err => {
+        console.log('Could not check for updates:', err.message);
+      });
+    }, 5000); // Wait 5 seconds after app starts
+  }
 });
 
 // Handle deep links on Mac

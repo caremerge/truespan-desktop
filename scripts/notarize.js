@@ -11,9 +11,18 @@ exports.default = async function notarizing(context) {
   }
 
   // Check for required environment variables
+  console.log('\n🔍 DEBUG: Checking environment variables...');
+  console.log('   APPLE_ID:', process.env.APPLE_ID ? '✓ SET' : '✗ MISSING');
+  console.log('   APPLE_APP_SPECIFIC_PASSWORD:', process.env.APPLE_APP_SPECIFIC_PASSWORD ? '✓ SET' : '✗ MISSING');
+  console.log('   APPLE_TEAM_ID:', process.env.APPLE_TEAM_ID ? '✓ SET' : '✗ MISSING');
+  
   if (!process.env.APPLE_ID || !process.env.APPLE_APP_SPECIFIC_PASSWORD || !process.env.APPLE_TEAM_ID) {
-    console.log('⚠️  Skipping notarization: Missing Apple credentials');
+    console.log('\n⚠️  Skipping notarization: Missing Apple credentials');
     console.log('   App will be signed but not notarized');
+    console.log('   Make sure .env file exists in project root with:');
+    console.log('   APPLE_ID=your@email.com');
+    console.log('   APPLE_APP_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx');
+    console.log('   APPLE_TEAM_ID=XXXXXXXXXX\n');
     return;
   }
 
