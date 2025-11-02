@@ -25,7 +25,7 @@
     "publish": {
       "provider": "github",
       "owner": "ryangalea23",
-      "repo": "truespan-desktop"
+      "repo": "truespan"
     },
     "directories": {
       "output": "dist"
