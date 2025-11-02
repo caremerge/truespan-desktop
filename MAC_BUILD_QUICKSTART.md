@@ -153,11 +153,50 @@ npm run build:mac
 
 ---
 
+## Troubleshooting
+
+### App Won't Open After Signing/Notarization
+
+**Problem**: App is properly signed and notarized but won't launch (error code 153/137)
+
+**Cause**: Entitlements file includes capabilities not provisioned in Apple Developer account
+
+**Solution**: Use minimal entitlements for Electron apps. Your `build/entitlements.mac.plist` should contain:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>
+```
+
+**Note**: Only add additional entitlements (like `associated-domains` or `keychain-access-groups`) if you've properly configured them in your Apple Developer account with provisioning profiles.
+
+### Verify Signing Status
+
+```bash
+# Check if app is properly signed and notarized
+spctl -a -vvv -t install "dist/mac-universal/TrueSpan Living.app"
+
+# Should show: source=Notarized Developer ID
+```
+
+---
+
 ## Need Help?
 
-1. **Certificate issues**: See `MAC_SIGNING_SETUP.md` for detailed guide
+1. **Certificate issues**: Check error logs in Actions tab
 2. **GitHub Actions failing**: Check Actions tab for error logs
 3. **No Mac for CSR**: Consider MacinCloud trial or ask a friend
+4. **App won't open**: See Troubleshooting section above
 
 ---
 
