@@ -13,12 +13,20 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
-    "dist": "electron-builder --publish=never"
+    "dist": "electron-builder --publish=never",
+    "publish": "electron-builder --publish=always",
+    "publish:win": "electron-builder --win --publish=always",
+    "publish:mac": "electron-builder --mac --publish=always"
   },
   "build": {
     "appId": "com.truespanliving.desktop",
     "productName": "TrueSpan Living",
     "copyright": "Copyright © 2024 TrueSpan Living",
+    "publish": {
+      "provider": "github",
+      "owner": "ryangalea23",
+      "repo": "truespan-desktop"
+    },
     "directories": {
       "output": "dist"
     },
@@ -53,10 +61,14 @@
         "teamId": "C42TKCA35H"
       },
       "extendInfo": {
-        "CFBundleURLTypes": [{
-          "CFBundleURLSchemes": ["https"],
-          "CFBundleURLName": "com.truespanliving.desktop"
-        }],
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "https"
+            ],
+            "CFBundleURLName": "com.truespanliving.desktop"
+          }
+        ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false
         }
@@ -96,5 +108,8 @@
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "electron-log": "^5.0.0",
+    "electron-updater": "^6.6.2"
+  }
 }

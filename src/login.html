@@ -243,6 +243,9 @@
     <script>
         const { ipcRenderer } = require('electron');
 
+        // Flag to prevent multiple simultaneous login attempts
+        let isLoggingIn = false;
+
         // Load stored credentials on startup (localStorage-based)
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('Login page loaded');
@@ -276,6 +279,12 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Prevent multiple simultaneous login attempts
+            if (isLoggingIn) {
+                console.log('Login already in progress, ignoring duplicate submission');
+                return;
+            }
+            
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
@@ -285,6 +294,7 @@
                 return;
             }
 
+            isLoggingIn = true;
             setLoading(true);
             hideError();
             hideAutoLoginMessage();
@@ -312,14 +322,19 @@
                 if (result.success) {
                     console.log('Login successful');
                     // Login successful - main window will open and login window will close
+                    // Keep button disabled and isLoggingIn=true until window closes
                 } else {
                     console.log('Login failed:', result);
                     showError(result.error || 'Login failed');
+                    // Re-enable the button on failure
+                    isLoggingIn = false;
+                    setLoading(false);
                 }
             } catch (error) {
                 console.error('Login error:', error);
                 showError('An unexpected error occurred');
-            } finally {
+                // Re-enable the button on error
+                isLoggingIn = false;
                 setLoading(false);
             }
         });
