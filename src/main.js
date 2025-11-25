@@ -427,7 +427,7 @@ ipcMain.handle('open-forgot-password', async () => {
   });
 
   // Load the forgot password page
-  forgotPasswordWindow.loadURL('https://login.goicon.com/login/forgot-password');
+  forgotPasswordWindow.loadURL('https://login.goicon.com/login/forgot');
 
   // Inject CSS to hide the GoIcon logo after page loads
   forgotPasswordWindow.webContents.on('did-finish-load', () => {
