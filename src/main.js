@@ -407,6 +407,68 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
   });
 }
 
+// Handle forgot password
+ipcMain.handle('open-forgot-password', async () => {
+  // Create forgot password window
+  const forgotPasswordWindow = new BrowserWindow({
+    width: 600,
+    height: 700,
+    title: 'Forgot Password - TrueSpan Living',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true
+    },
+    show: false,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, '../assets/icon.png'),
+    parent: loginWindow || mainWindow, // Make it a child of login or main window
+    modal: false
+  });
+
+  // Load the forgot password page
+  forgotPasswordWindow.loadURL('https://login.goicon.com/login/services/user_api/forgot_password');
+
+  // Inject CSS to hide the GoIcon logo after page loads
+  forgotPasswordWindow.webContents.on('did-finish-load', () => {
+    if (!forgotPasswordWindow || forgotPasswordWindow.isDestroyed()) {
+      return;
+    }
+    
+    forgotPasswordWindow.webContents.insertCSS(`
+      /* Hide GoIcon logo */
+      #header.header-goicon {
+        display: none !important;
+      }
+      
+      /* Optional: Add some top padding to compensate for removed header */
+      body {
+        padding-top: 20px !important;
+      }
+    `).then(() => {
+      console.log('CSS injected to hide GoIcon logo on forgot password page');
+    }).catch(err => {
+      console.error('Failed to inject CSS:', err);
+    });
+  });
+
+  forgotPasswordWindow.once('ready-to-show', () => {
+    if (forgotPasswordWindow && !forgotPasswordWindow.isDestroyed()) {
+      forgotPasswordWindow.show();
+    }
+  });
+
+  forgotPasswordWindow.on('closed', () => {
+    console.log('Forgot password window closed');
+  });
+
+  // Handle external links - open in default browser
+  forgotPasswordWindow.webContents.setWindowOpenHandler(({ url }) => {
+    require('electron').shell.openExternal(url);
+    return { action: 'deny' };
+  });
+});
+
 // Handle login form submission
 ipcMain.handle('login', async (event, { username, password }) => {
   // Prevent duplicate login processing
