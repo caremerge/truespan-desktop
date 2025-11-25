@@ -231,6 +231,10 @@
 
             <div class="error-message" id="errorMessage"></div>
 
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" id="forgotPasswordLink" style="color: #1C42FF; text-decoration: none; font-size: 14px;">Forgot Password?</a>
+            </div>
+
             <div class="auto-login-message" id="autoLoginMessage">
                 <span class="spinner"></span>
                 Signing in automatically...
@@ -399,6 +403,12 @@
             if (e.key === 'Enter') {
                 document.getElementById('loginForm').dispatchEvent(new Event('submit'));
             }
+        });
+
+        // Handle Forgot Password link
+        document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            ipcRenderer.invoke('open-forgot-password');
         });
     </script>
 </body>
