@@ -429,9 +429,47 @@ ipcMain.handle('open-forgot-password', async () => {
   // Load the forgot password page
   forgotPasswordWindow.loadURL('https://login.goicon.com/login/forgot');
 
+  // Monitor navigation to detect when user clicks "Back" or navigates to login
+  forgotPasswordWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    console.log('Forgot password navigation detected:', navigationUrl);
+    
+    // If user navigates back to login page, close the forgot password window
+    if (navigationUrl.includes('/login') && !navigationUrl.includes('/forgot')) {
+      console.log('User clicked Back - closing forgot password window');
+      if (forgotPasswordWindow && !forgotPasswordWindow.isDestroyed()) {
+        forgotPasswordWindow.close();
+      }
+    }
+  });
+
+  // Also monitor after navigation completes
+  forgotPasswordWindow.webContents.on('did-navigate', (event, navigationUrl) => {
+    console.log('Forgot password navigation completed:', navigationUrl);
+    
+    // Close window if navigated to login page
+    if (navigationUrl.includes('/login') && !navigationUrl.includes('/forgot')) {
+      console.log('Navigated to login page - closing forgot password window');
+      if (forgotPasswordWindow && !forgotPasswordWindow.isDestroyed()) {
+        forgotPasswordWindow.close();
+      }
+    }
+  });
+
   // Inject CSS to hide the GoIcon logo after page loads
   forgotPasswordWindow.webContents.on('did-finish-load', () => {
     if (!forgotPasswordWindow || forgotPasswordWindow.isDestroyed()) {
+      return;
+    }
+    
+    const currentUrl = forgotPasswordWindow.webContents.getURL();
+    console.log('Forgot password page loaded:', currentUrl);
+    
+    // Check if we're back on the login page and close if so
+    if (currentUrl.includes('/login') && !currentUrl.includes('/forgot')) {
+      console.log('Loaded login page - closing forgot password window');
+      if (forgotPasswordWindow && !forgotPasswordWindow.isDestroyed()) {
+        forgotPasswordWindow.close();
+      }
       return;
     }
     
