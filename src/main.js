@@ -169,7 +169,7 @@ function createLoginWindow() {
   loginWindow = new BrowserWindow({
     width: config.LOGIN_WINDOW.width,
     height: config.LOGIN_WINDOW.height,
-    title: 'TrueSpan Living',
+    title: 'Truespan Neighborhood',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -207,7 +207,7 @@ function createLoginWindowWithError(errorMessage) {
   loginWindow = new BrowserWindow({
     width: config.LOGIN_WINDOW.width,
     height: config.LOGIN_WINDOW.height,
-    title: 'TrueSpan Living',
+    title: 'Truespan Neighborhood',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -252,7 +252,7 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
   mainWindow = new BrowserWindow({
     width: config.MAIN_WINDOW.width,
     height: config.MAIN_WINDOW.height,
-    title: 'TrueSpan Living',
+    title: 'Truespan Neighborhood',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -413,7 +413,7 @@ ipcMain.handle('open-forgot-password', async () => {
   const forgotPasswordWindow = new BrowserWindow({
     width: 600,
     height: 700,
-    title: 'Forgot Password - TrueSpan Living',
+    title: 'Forgot Password - Truespan Neighborhood',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -473,6 +473,7 @@ ipcMain.handle('open-forgot-password', async () => {
       return;
     }
     
+    // Inject CSS to hide the GoIcon logo
     forgotPasswordWindow.webContents.insertCSS(`
       /* Hide GoIcon logo */
       #header.header-goicon {
@@ -487,6 +488,64 @@ ipcMain.handle('open-forgot-password', async () => {
       console.log('CSS injected to hide GoIcon logo on forgot password page');
     }).catch(err => {
       console.error('Failed to inject CSS:', err);
+    });
+    
+    // Inject JavaScript to intercept Back button/link clicks
+    forgotPasswordWindow.webContents.executeJavaScript(`
+      // Find and intercept the Back button or link
+      (function() {
+        // Wait a bit for DOM to be ready
+        setTimeout(() => {
+          // Find all links AND buttons
+          const allLinks = document.querySelectorAll('a');
+          const allButtons = document.querySelectorAll('button');
+          
+          // Handle links
+          allLinks.forEach(link => {
+            const text = link.textContent.trim().toLowerCase();
+            const href = link.getAttribute('href') || '';
+            
+            // Check if it's a Back link or login link (but not forgot)
+            if (text === 'back' || 
+                text === 'back to login' || 
+                text.includes('back') ||
+                (href.includes('/login') && !href.includes('/forgot'))) {
+              
+              link.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Back link clicked - triggering window close');
+                
+                // Navigate to login page to trigger our close logic
+                window.location.href = 'https://login.goicon.com/login';
+              });
+            }
+          });
+          
+          // Handle buttons
+          allButtons.forEach(button => {
+            const text = button.textContent.trim().toLowerCase();
+            const type = button.getAttribute('type') || '';
+            
+            // Check if it's a Back button
+            if (text === 'back' || 
+                text === 'back to login' || 
+                text.includes('back')) {
+              
+              button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Back button clicked - triggering window close');
+                
+                // Navigate to login page to trigger our close logic
+                window.location.href = 'https://login.goicon.com/login';
+              });
+            }
+          });
+        }, 100);
+      })();
+    `).catch(err => {
+      console.error('Failed to inject JavaScript:', err);
     });
   });
 
@@ -606,7 +665,7 @@ async function authenticateUser(username, password) {
     const authWindow = new BrowserWindow({
       width: 800,
       height: 600,
-      title: 'TrueSpan Living',
+      title: 'Truespan Neighborhood',
       show: false, // Hidden window
       webPreferences: {
         nodeIntegration: false,
