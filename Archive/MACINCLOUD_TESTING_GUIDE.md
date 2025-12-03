@@ -12,7 +12,7 @@ Your Mac installer is configured as a **DMG (drag-and-drop)** which means:
 ## How DMG Installation Works
 
 When you open the DMG:
-1. A window appears showing the TrueSpan Living app icon
+1. A window appears showing the Truespan Neighborhood app icon
 2. An arrow or shortcut to the Applications folder
 3. User **drags** the app icon to Applications (or anywhere else)
 4. Done! No password needed
@@ -55,7 +55,7 @@ This is the **key part** - no admin needed!
 ```bash
 # Method 1: Install to Applications folder (WILL FAIL on MacinCloud)
 # Don't do this - requires admin:
-# sudo cp -R "TrueSpan Living.app" /Applications/
+# sudo cp -R "Truespan Neighborhood.app" /Applications/
 
 # Method 2: Install to home directory (WORKS - NO ADMIN)
 # Do this instead:
@@ -65,7 +65,7 @@ open ~/Downloads/TrueSpan-Living-1.0.0-arm64.dmg
 
 # Wait for it to mount, then drag the app to your Desktop or home directory
 # Or use Terminal:
-cp -R "/Volumes/TrueSpan Living 1.0.0/TrueSpan Living.app" ~/Desktop/
+cp -R "/Volumes/Truespan Neighborhood 1.0.0/Truespan Neighborhood.app" ~/Desktop/
 
 # Run it from there:
 open ~/Desktop/TrueSpan\ Living.app
@@ -97,18 +97,18 @@ Since MacinCloud doesn't give admin access, you can install to:
 
 ### Option 1: Desktop (Easiest)
 ```bash
-cp -R "/Volumes/TrueSpan Living 1.0.0/TrueSpan Living.app" ~/Desktop/
+cp -R "/Volumes/Truespan Neighborhood 1.0.0/Truespan Neighborhood.app" ~/Desktop/
 ```
 
 ### Option 2: Home Applications Folder
 ```bash
 mkdir -p ~/Applications
-cp -R "/Volumes/TrueSpan Living 1.0.0/TrueSpan Living.app" ~/Applications/
+cp -R "/Volumes/Truespan Neighborhood 1.0.0/Truespan Neighborhood.app" ~/Applications/
 ```
 
 ### Option 3: Downloads Folder
 ```bash
-cp -R "/Volumes/TrueSpan Living 1.0.0/TrueSpan Living.app" ~/Downloads/
+cp -R "/Volumes/Truespan Neighborhood 1.0.0/Truespan Neighborhood.app" ~/Downloads/
 ```
 
 **All of these work without admin!**
@@ -124,7 +124,7 @@ You can verify notarization without admin access:
 spctl -a -vv -t install ~/Desktop/TrueSpan\ Living.app
 
 # Should show:
-# ~/Desktop/TrueSpan Living.app: accepted
+# ~/Desktop/Truespan Neighborhood.app: accepted
 # source=Notarized Developer ID
 # origin=Developer ID Application: Go Icon LLC (YOUR_TEAM_ID)
 ```
@@ -139,11 +139,11 @@ When users open the DMG, they'll see:
 
 ```
 ┌─────────────────────────────────────────┐
-│  TrueSpan Living 1.0.0                  │
+│  Truespan Neighborhood 1.0.0                  │
 ├─────────────────────────────────────────┤
 │                                         │
 │      [App Icon]       →    [Applications]│
-│   TrueSpan Living          Folder       │
+│   Truespan Neighborhood          Folder       │
 │                                         │
 │   ← Drag app here to install            │
 │                                         │
@@ -181,7 +181,7 @@ Save this as `test-installer.sh`:
 ```bash
 #!/bin/bash
 
-echo "🚀 Testing TrueSpan Living Mac Installer"
+echo "🚀 Testing Truespan Neighborhood Mac Installer"
 echo ""
 
 # Download DMG (replace with your link)
@@ -201,11 +201,11 @@ hdiutil attach "$DMG_PATH"
 
 # Copy to Desktop
 echo "📋 Copying app to Desktop..."
-cp -R "/Volumes/TrueSpan Living 1.0.0/TrueSpan Living.app" ~/Desktop/
+cp -R "/Volumes/Truespan Neighborhood 1.0.0/Truespan Neighborhood.app" ~/Desktop/
 
 # Unmount
 echo "📤 Unmounting DMG..."
-hdiutil detach "/Volumes/TrueSpan Living 1.0.0"
+hdiutil detach "/Volumes/Truespan Neighborhood 1.0.0"
 
 # Verify signature
 echo "🔍 Verifying notarization..."
@@ -213,7 +213,7 @@ spctl -a -vv -t install ~/Desktop/TrueSpan\ Living.app
 
 echo ""
 echo "✅ Done! Try launching the app:"
-echo "   Double-click 'TrueSpan Living' on your Desktop"
+echo "   Double-click 'Truespan Neighborhood' on your Desktop"
 echo ""
 echo "Expected result:"
 echo "  ✅ App opens without security warnings"
@@ -236,7 +236,7 @@ chmod +x test-installer.sh
 **Cause:** Notarization failed or wasn't completed
 **Fix:** 
 1. Check GitHub Actions logs for notarization success
-2. Look for: `✅ Successfully notarized TrueSpan Living`
+2. Look for: `✅ Successfully notarized Truespan Neighborhood`
 3. Make sure you downloaded the correct DMG (after notarization was added)
 
 ### Issue: "Operation not permitted"
@@ -305,7 +305,7 @@ curl -L -o ~/Downloads/installer.dmg "YOUR_LINK"
 open ~/Downloads/installer.dmg
 
 # 3. Copy to Desktop (NO SUDO NEEDED)
-cp -R "/Volumes/TrueSpan Living 1.0.0/TrueSpan Living.app" ~/Desktop/
+cp -R "/Volumes/Truespan Neighborhood 1.0.0/Truespan Neighborhood.app" ~/Desktop/
 
 # 4. Verify notarization
 spctl -a -vv -t install ~/Desktop/TrueSpan\ Living.app

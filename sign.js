@@ -74,7 +74,7 @@ exports.default = async function(configuration) {
       `-password="${process.env.ESIGNER_PASSWORD}" ` +
       `-credential_id="${process.env.ESIGNER_CREDENTIAL_ID}" ` +
       `-totp_secret="${process.env.ESIGNER_TOTP_SECRET}" ` +
-      `-program_name="TrueSpan Living" ` +
+      `-program_name="Truespan Neighborhood" ` +
       `-input_file_path="${fileToSign}" ` +
       `-override=true`;
 

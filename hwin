@@ -209,8 +209,8 @@
 [32m+[m[32m### Issue: "Update check fails silently"[m
 [32m+[m
 [32m+[m[32m**Solution**: Check logs:[m
-[32m+[m[32m- Windows: `%USERPROFILE%\AppData\Roaming\TrueSpan Living\logs\main.log`[m
-[32m+[m[32m- Mac: `~/Library/Logs/TrueSpan Living/main.log`[m
+[32m+[m[32m- Windows: `%USERPROFILE%\AppData\Roaming\Truespan Neighborhood\logs\main.log`[m
+[32m+[m[32m- Mac: `~/Library/Logs/Truespan Neighborhood/main.log`[m
 [32m+[m
 [32m+[m[32m### Issue: GH_TOKEN not working[m
 [32m+[m
@@ -255,8 +255,8 @@
 [32m+[m[32m### See Update Logs[m
 [32m+[m
 [32m+[m[32mCheck logs in:[m
-[32m+[m[32m- **Windows**: `%USERPROFILE%\AppData\Roaming\TrueSpan Living\logs\main.log`[m
-[32m+[m[32m- **Mac**: `~/Library/Logs/TrueSpan Living/main.log`[m
+[32m+[m[32m- **Windows**: `%USERPROFILE%\AppData\Roaming\Truespan Neighborhood\logs\main.log`[m
+[32m+[m[32m- **Mac**: `~/Library/Logs/Truespan Neighborhood/main.log`[m
 [32m+[m
 [32m+[m[32m## 🎉 You're All Set![m
 [32m+[m
@@ -388,13 +388,13 @@
 [32m+[m
 [32m+[m[32m```bash[m
 [32m+[m[32m# All green ✅[m
-[32m+[m[32mspctl -a -vvv -t install "dist/mac-universal/TrueSpan Living.app"[m
+[32m+[m[32mspctl -a -vvv -t install "dist/mac-universal/Truespan Neighborhood.app"[m
 [32m+[m[32m# Output: source=Notarized Developer ID[m
 [32m+[m
-[32m+[m[32mcodesign --verify --deep --strict "dist/mac-universal/TrueSpan Living.app"[m
+[32m+[m[32mcodesign --verify --deep --strict "dist/mac-universal/Truespan Neighborhood.app"[m
 [32m+[m[32m# No output = success[m
 [32m+[m
-[32m+[m[32mopen "dist/mac-universal/TrueSpan Living.app"[m
+[32m+[m[32mopen "dist/mac-universal/Truespan Neighborhood.app"[m
 [32m+[m[32m# App launches![m
 [32m+[m[32m```[m
 [32m+[m

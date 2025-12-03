@@ -104,7 +104,7 @@ jobs:
         APP_PATH=$(find dist -name "*.app" -type d | head -1)
         if [ -n "$APP_PATH" ]; then
           echo "Testing app at: $APP_PATH"
-          timeout 10s "$APP_PATH/Contents/MacOS/TrueSpan Living" || echo "App test failed or timed out"
+          timeout 10s "$APP_PATH/Contents/MacOS/Truespan Neighborhood" || echo "App test failed or timed out"
         fi
     
     - name: Verify built app
@@ -130,7 +130,7 @@ jobs:
         ls -lh "$APP_PATH/Contents/Info.plist"
         
         # Verify the executable exists and is executable
-        EXECUTABLE="$APP_PATH/Contents/MacOS/TrueSpan Living"
+        EXECUTABLE="$APP_PATH/Contents/MacOS/Truespan Neighborhood"
         if [ -f "$EXECUTABLE" ]; then
           echo "✅ Executable exists"
           ls -lh "$EXECUTABLE"
@@ -177,7 +177,7 @@ jobs:
     - name: Create ZIP of app bundle
       run: |
         cd dist/mac-universal
-        ditto -c -k --keepParent "TrueSpan Living.app" "TrueSpan-Living-${{ github.sha }}.zip"
+        ditto -c -k --keepParent "Truespan Neighborhood.app" "TrueSpan-Living-${{ github.sha }}.zip"
         ls -lh "TrueSpan-Living-${{ github.sha }}.zip"
     
     - name: Upload app ZIP

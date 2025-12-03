@@ -74,13 +74,13 @@ npm run build:mac
 
 ```bash
 # All green ✅
-spctl -a -vvv -t install "dist/mac-universal/TrueSpan Living.app"
+spctl -a -vvv -t install "dist/mac-universal/Truespan Neighborhood.app"
 # Output: source=Notarized Developer ID
 
-codesign --verify --deep --strict "dist/mac-universal/TrueSpan Living.app"
+codesign --verify --deep --strict "dist/mac-universal/Truespan Neighborhood.app"
 # No output = success
 
-open "dist/mac-universal/TrueSpan Living.app"
+open "dist/mac-universal/Truespan Neighborhood.app"
 # App launches!
 ```
 

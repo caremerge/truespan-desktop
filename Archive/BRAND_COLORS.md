@@ -1,4 +1,4 @@
-# TrueSpan Living Brand Colors
+# Truespan Neighborhood Brand Colors
 
 ## Primary Colors
 

@@ -103,14 +103,14 @@ Add this step to `.github/workflows/build-mac.yml`:
 - name: Verify signing and notarization
   run: |
     echo "🔍 Verifying code signature..."
-    codesign -dv --verbose=4 "dist/mac/TrueSpan Living.app"
+    codesign -dv --verbose=4 "dist/mac/Truespan Neighborhood.app"
     
     echo "🔍 Verifying Gatekeeper..."
-    spctl -a -vv -t install "dist/mac/TrueSpan Living.app"
+    spctl -a -vv -t install "dist/mac/Truespan Neighborhood.app"
     
     echo "🔍 Checking DMG..."
     hdiutil attach dist/*.dmg -mountpoint /tmp/test-mount
-    spctl -a -vv -t install "/tmp/test-mount/TrueSpan Living.app"
+    spctl -a -vv -t install "/tmp/test-mount/Truespan Neighborhood.app"
     hdiutil detach /tmp/test-mount
     
     echo "✅ All verification checks passed!"
@@ -194,8 +194,8 @@ If you still want to try:
 - No need to right-click → Open
 
 ### ❌ Failure (Not Notarized):
-- "TrueSpan Living can't be opened because Apple cannot check it for malicious software"
-- "TrueSpan Living is an app downloaded from the Internet. Are you sure you want to open it?"
+- "Truespan Neighborhood can't be opened because Apple cannot check it for malicious software"
+- "Truespan Neighborhood is an app downloaded from the Internet. Are you sure you want to open it?"
 - Requires right-click → Open to launch
 
 ---
@@ -243,8 +243,8 @@ If you test and STILL see warnings:
 ### Check 1: Was notarization actually enabled?
 ```bash
 # In your GitHub Actions logs, look for:
-"🔐 Starting notarization for TrueSpan Living..."
-"✅ Successfully notarized TrueSpan Living"
+"🔐 Starting notarization for Truespan Neighborhood..."
+"✅ Successfully notarized Truespan Neighborhood"
 ```
 
 ### Check 2: Are credentials correct?
@@ -255,7 +255,7 @@ If you test and STILL see warnings:
 ### Check 3: Did notarization actually run?
 ```bash
 # On the Mac, check notarization ticket:
-spctl -a -vv "TrueSpan Living.app"
+spctl -a -vv "Truespan Neighborhood.app"
 
 # Should show:
 # source=Notarized Developer ID
@@ -293,7 +293,7 @@ If you run into issues:
 1. **Check GitHub Actions logs** for notarization errors
 2. **Look for this in logs:**
    ```
-   ✅ Successfully notarized TrueSpan Living
+   ✅ Successfully notarized Truespan Neighborhood
    ```
 3. **If you see errors**, check:
    - Apple ID credentials in GitHub Secrets

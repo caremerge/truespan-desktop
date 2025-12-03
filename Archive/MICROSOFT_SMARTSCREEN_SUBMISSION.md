@@ -3,9 +3,9 @@
 ## Step 1: Prepare Your Information
 
 You'll need:
-- ✅ **Installer file**: `TrueSpan Living Setup 1.0.0.exe`
+- ✅ **Installer file**: `Truespan Neighborhood Setup 1.0.0.exe`
 - ✅ **Company**: VoiceFriend, LLC
-- ✅ **Application Name**: TrueSpan Living
+- ✅ **Application Name**: Truespan Neighborhood
 - ✅ **Website**: Your company/product website
 - ✅ **Contact Email**: Your support email
 
@@ -18,10 +18,10 @@ You'll need:
 2. Click **"Submit a file for malware analysis"**
 
 3. Fill out the form:
-   - **File to submit**: Upload `TrueSpan Living Setup 1.0.0.exe`
+   - **File to submit**: Upload `Truespan Neighborhood Setup 1.0.0.exe`
    - **Submission type**: Select "I think this file is clean"
    - **Email**: Your contact email
-   - **Product name**: TrueSpan Living
+   - **Product name**: Truespan Neighborhood
    - **Company name**: VoiceFriend, LLC
    - **Description**: "This is a legitimate business application installer, digitally signed with an EV code signing certificate from SSL.com"
 
@@ -39,7 +39,7 @@ You'll need:
 
 5. Description:
    ```
-   Application: TrueSpan Living Setup 1.0.0.exe
+   Application: Truespan Neighborhood Setup 1.0.0.exe
    Company: VoiceFriend, LLC
    Certificate: EV Code Signing from SSL.com
    
@@ -99,7 +99,7 @@ After 3-5 days, test on a fresh Windows machine to see if warnings reduced.
 
 To check if your app is allowlisted:
 ```powershell
-Get-AuthenticodeSignature "TrueSpan Living Setup 1.0.0.exe"
+Get-AuthenticodeSignature "Truespan Neighborhood Setup 1.0.0.exe"
 ```
 
 Status should remain "Valid" - if SmartScreen warnings reduce, reputation is building!

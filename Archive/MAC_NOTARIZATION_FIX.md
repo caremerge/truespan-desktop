@@ -5,8 +5,8 @@
 Your Mac installer is showing Gatekeeper warnings because the app is **signed but not notarized** by Apple.
 
 ### The Errors You're Seeing:
-1. **"The application 'TrueSpan Living' can't be opened"** - Initial Gatekeeper block
-2. **"TrueSpan Living is an app downloaded from the Internet"** - Security warning
+1. **"The application 'Truespan Neighborhood' can't be opened"** - Initial Gatekeeper block
+2. **"Truespan Neighborhood is an app downloaded from the Internet"** - Security warning
 
 ### Root Cause:
 - `package.json` line 49 had `"notarize": false` ❌
@@ -164,13 +164,13 @@ After building, verify the app is properly notarized:
 
 ```bash
 # Check signature
-codesign -dv --verbose=4 "dist/mac/TrueSpan Living.app"
+codesign -dv --verbose=4 "dist/mac/Truespan Neighborhood.app"
 
 # Check notarization
-spctl -a -vv -t install "dist/mac/TrueSpan Living.app"
+spctl -a -vv -t install "dist/mac/Truespan Neighborhood.app"
 
 # Check DMG
-spctl -a -vv -t open --context context:primary-signature "dist/TrueSpan Living-1.0.0-arm64.dmg"
+spctl -a -vv -t open --context context:primary-signature "dist/Truespan Neighborhood-1.0.0-arm64.dmg"
 ```
 
 Expected output:
