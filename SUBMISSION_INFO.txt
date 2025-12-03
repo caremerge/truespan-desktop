@@ -4,7 +4,7 @@ Microsoft SmartScreen Submission - Quick Reference
 COPY THIS INFORMATION FOR YOUR SUBMISSION:
 
 Application Name:
-TrueSpan Living
+Truespan Neighborhood
 
 Company Name:
 VoiceFriend, LLC
@@ -13,14 +13,14 @@ Product Version:
 1.0.0
 
 File to Upload:
-C:\Users\ryanm\Coding Local\Truespan\dist\TrueSpan Living Setup 1.0.0.exe
+C:\Users\ryanm\Coding Local\Truespan\dist\Truespan Neighborhood Setup 1.0.0.exe
 
 Submission Type:
 ☑ I think this file is clean (False Positive)
 
 Description (copy this):
 ---
-This is a legitimate business application installer for TrueSpan Living, digitally signed with an Extended Validation (EV) code signing certificate from SSL.com. The application is showing SmartScreen warnings despite being properly signed with a valid certificate.
+This is a legitimate business application installer for Truespan Neighborhood, digitally signed with an Extended Validation (EV) code signing certificate from SSL.com. The application is showing SmartScreen warnings despite being properly signed with a valid certificate.
 
 Certificate Information:
 - Subject: CN="VoiceFriend, LLC", O=Icon, L=Boston, ST=Massachusetts, C=US

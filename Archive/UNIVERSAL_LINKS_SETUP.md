@@ -2,7 +2,7 @@
 
 ## Overview
 
-This allows `https://goicon.com/...` URLs to open the TrueSpan Living desktop app automatically (if installed). If the app is not installed, the URL opens in the browser normally.
+This allows `https://goicon.com/...` URLs to open the Truespan Neighborhood desktop app automatically (if installed). If the app is not installed, the URL opens in the browser normally.
 
 **No code changes needed on your end** - just host 2 small JSON files.
 

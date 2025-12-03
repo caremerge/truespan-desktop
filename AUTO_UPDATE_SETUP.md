@@ -196,8 +196,8 @@ ipcRenderer.invoke('check-for-updates');
 ### Issue: "Update check fails silently"
 
 **Solution**: Check logs:
-- Windows: `%USERPROFILE%\AppData\Roaming\TrueSpan Living\logs\main.log`
-- Mac: `~/Library/Logs/TrueSpan Living/main.log`
+- Windows: `%USERPROFILE%\AppData\Roaming\Truespan Neighborhood\logs\main.log`
+- Mac: `~/Library/Logs/Truespan Neighborhood/main.log`
 
 ### Issue: GH_TOKEN not working
 
@@ -242,8 +242,8 @@ https://github.com/YOUR_USERNAME/truespan-desktop/releases
 ### See Update Logs
 
 Check logs in:
-- **Windows**: `%USERPROFILE%\AppData\Roaming\TrueSpan Living\logs\main.log`
-- **Mac**: `~/Library/Logs/TrueSpan Living/main.log`
+- **Windows**: `%USERPROFILE%\AppData\Roaming\Truespan Neighborhood\logs\main.log`
+- **Mac**: `~/Library/Logs/Truespan Neighborhood/main.log`
 
 ## 🎉 You're All Set!
 

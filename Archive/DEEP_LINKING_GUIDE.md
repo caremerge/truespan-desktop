@@ -1,8 +1,8 @@
-# Deep Linking Guide for TrueSpan Living
+# Deep Linking Guide for Truespan Neighborhood
 
 ## What is Deep Linking?
 
-Deep linking allows you to open the TrueSpan Living app directly from emails, websites, or other applications using special URLs.
+Deep linking allows you to open the Truespan Neighborhood app directly from emails, websites, or other applications using special URLs.
 
 ---
 
@@ -47,7 +47,7 @@ Opens the app and navigates to `https://api.goicon.com/settings/profile`
 In your emails, use deep links to direct users to specific pages:
 
 ```html
-<a href="truespanliving://social">Open TrueSpan Living</a>
+<a href="truespanliving://social">Open Truespan Neighborhood</a>
 ```
 
 ### **2. Website Links**
@@ -93,10 +93,10 @@ notification.onclick = () => {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TrueSpan Living Notification</title>
+    <title>Truespan Neighborhood Notification</title>
 </head>
 <body>
-    <h2>New Activity in TrueSpan Living</h2>
+    <h2>New Activity in Truespan Neighborhood</h2>
     <p>You have new updates waiting for you!</p>
     
     <!-- Deep link button -->
@@ -107,7 +107,7 @@ notification.onclick = () => {
               text-decoration: none; 
               display: inline-block; 
               border-radius: 4px;">
-        Open in TrueSpan Living App
+        Open in Truespan Neighborhood App
     </a>
     
     <!-- Fallback web link -->

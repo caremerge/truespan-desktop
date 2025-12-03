@@ -32,13 +32,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: TrueSpan Living ${{ steps.get_version.outputs.version }}
+          release_name: Truespan Neighborhood ${{ steps.get_version.outputs.version }}
           body: |
-            ## TrueSpan Living Desktop Application
+            ## Truespan Neighborhood Desktop Application
             
             ### Downloads
-            - **macOS** (Universal - Intel & Apple Silicon): `TrueSpan Living-${{ steps.get_version.outputs.version }}-universal.dmg`
-            - **Windows**: `TrueSpan Living Setup ${{ steps.get_version.outputs.version }}.exe`
+            - **macOS** (Universal - Intel & Apple Silicon): `Truespan Neighborhood-${{ steps.get_version.outputs.version }}-universal.dmg`
+            - **Windows**: `Truespan Neighborhood Setup ${{ steps.get_version.outputs.version }}.exe`
             
             ### Changes
             - ✅ Cross-platform desktop application
@@ -147,7 +147,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/TrueSpan Living-1.0.0-universal.dmg
+          asset_path: ./dist/Truespan Neighborhood-1.0.0-universal.dmg
           asset_name: TrueSpan-Living-${{ needs.create-release.outputs.version }}-universal.dmg
           asset_content_type: application/x-apple-diskimage
 
@@ -181,7 +181,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/TrueSpan Living Setup 1.0.0.exe
+          asset_path: ./dist/Truespan Neighborhood Setup 1.0.0.exe
           asset_name: TrueSpan-Living-Setup-${{ needs.create-release.outputs.version }}.exe
           asset_content_type: application/x-msdownload
 

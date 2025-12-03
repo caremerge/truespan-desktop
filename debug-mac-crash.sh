@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🔍 Debugging TrueSpan Living Mac App Crash"
+echo "🔍 Debugging Truespan Neighborhood Mac App Crash"
 echo "=========================================="
 echo ""
 
@@ -45,7 +45,7 @@ echo ""
 
 # Check Console logs
 echo "7. Recent Console Logs:"
-log show --predicate 'process == "TrueSpan Living"' --last 2m --info 2>/dev/null | tail -20
+log show --predicate 'process == "Truespan Neighborhood"' --last 2m --info 2>/dev/null | tail -20
 echo ""
 
 echo "=========================================="

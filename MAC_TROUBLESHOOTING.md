@@ -59,19 +59,19 @@ npm run build:mac
 
 ```bash
 # Check signing and notarization
-spctl -a -vvv -t install "dist/mac-universal/TrueSpan Living.app"
+spctl -a -vvv -t install "dist/mac-universal/Truespan Neighborhood.app"
 # Should show: source=Notarized Developer ID
 
 # Verify signature
-codesign --verify --deep --strict "dist/mac-universal/TrueSpan Living.app"
+codesign --verify --deep --strict "dist/mac-universal/Truespan Neighborhood.app"
 # Should complete with no output = success
 
 # Check entitlements
-codesign -d --entitlements :- "dist/mac-universal/TrueSpan Living.app"
+codesign -d --entitlements :- "dist/mac-universal/Truespan Neighborhood.app"
 # Should only show the three minimal entitlements
 
 # Try to open
-open "dist/mac-universal/TrueSpan Living.app"
+open "dist/mac-universal/Truespan Neighborhood.app"
 # Should launch successfully
 ```
 
@@ -148,7 +148,7 @@ security find-identity -v -p codesigning
 **Solution**: The .app file is already built and usable:
 ```bash
 # Use the app directly from:
-dist/mac-universal/TrueSpan Living.app
+dist/mac-universal/Truespan Neighborhood.app
 
 # Or build without DMG temporarily
 npm run build -- --mac --dir

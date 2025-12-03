@@ -1,9 +1,9 @@
 {
   "name": "truespan-desktop",
   "version": "1.0.1",
-  "description": "TrueSpan Living Desktop Application - Website Wrapper with Custom Authentication",
+  "description": "Truespan Neighborhood Desktop Application - Website Wrapper with Custom Authentication",
   "author": {
-    "name": "TrueSpan Living",
+    "name": "Truespan Neighborhood",
     "email": "support@truespanliving.com"
   },
   "main": "src/main.js",
@@ -20,8 +20,8 @@
   },
   "build": {
     "appId": "com.truespanliving.desktop",
-    "productName": "TrueSpan Living",
-    "copyright": "Copyright © 2024 TrueSpan Living",
+    "productName": "Truespan Neighborhood",
+    "copyright": "Copyright © 2024 Truespan Neighborhood",
     "publish": {
       "provider": "github",
       "owner": "ryangalea23",
@@ -77,7 +77,7 @@
     "afterSign": "scripts/notarize.js",
     "dmg": {
       "sign": false,
-      "title": "TrueSpan Living ${version}",
+      "title": "Truespan Neighborhood ${version}",
       "icon": "assets/icon.png",
       "background": null,
       "contents": [

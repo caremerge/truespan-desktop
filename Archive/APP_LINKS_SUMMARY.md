@@ -88,9 +88,9 @@ Both will have Universal Links support built-in!
 ```
 User clicks: https://goicon.com/social (in email)
          ↓
-OS detects: "TrueSpan Living app handles goicon.com"
+OS detects: "Truespan Neighborhood app handles goicon.com"
          ↓
-Opens: TrueSpan Living app → navigates to /social
+Opens: Truespan Neighborhood app → navigates to /social
 ```
 
 ### Scenario 2: User Doesn't Have App
@@ -108,7 +108,7 @@ Opens: Default web browser → https://goicon.com/social
 ```
 User clicks: https://goicon.com/dashboard (in email)
          ↓
-Opens: TrueSpan Living app → shows login screen
+Opens: Truespan Neighborhood app → shows login screen
          ↓
 User logs in successfully
          ↓

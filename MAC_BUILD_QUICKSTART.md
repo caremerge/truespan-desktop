@@ -184,7 +184,7 @@ npm run build:mac
 
 ```bash
 # Check if app is properly signed and notarized
-spctl -a -vvv -t install "dist/mac-universal/TrueSpan Living.app"
+spctl -a -vvv -t install "dist/mac-universal/Truespan Neighborhood.app"
 
 # Should show: source=Notarized Developer ID
 ```
