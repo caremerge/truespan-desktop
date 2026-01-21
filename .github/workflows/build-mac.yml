@@ -3,7 +3,14 @@ name: Build macOS Installer
 on:
   push:
     branches: [ main, production ]
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag to upload DMG to (e.g., v1.0.5)'
+        required: false
+        default: ''
 
 jobs:
   build-mac:
@@ -167,12 +174,34 @@ jobs:
         spctl -a -vvv "$APP_PATH"
         
         echo "✅ App verification complete"
+
+    - name: Locate DMG
+      id: find_dmg
+      run: |
+        DMG_PATH=$(find dist -maxdepth 2 -name "*.dmg" | head -1)
+        if [ -z "$DMG_PATH" ]; then
+          echo "DMG not found in dist/"
+          exit 1
+        fi
+        echo "dmg_path=$DMG_PATH" >> $GITHUB_OUTPUT
+
+    - name: Upload DMG to GitHub Release
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="${{ github.ref_name }}"
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.release_tag }}" ]; then
+          TAG="${{ inputs.release_tag }}"
+        fi
+        echo "Uploading DMG to release: $TAG"
+        gh release upload "$TAG" "${{ steps.find_dmg.outputs.dmg_path }}" --clobber
     
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
       with:
         name: macos-dmg
-        path: dist/*.dmg
+        path: ${{ steps.find_dmg.outputs.dmg_path }}
     
     - name: Create ZIP of app bundle
       run: |
