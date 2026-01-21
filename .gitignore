@@ -54,6 +54,7 @@ jspm_packages/
 .env
 .env.local
 .specstory/
+
 # Code signing certificates and credentials
 certs/
 *.pfx

@@ -278,6 +278,10 @@ function injectGoiconLoginBranding(targetWindow, errorMessage) {
   if (!targetWindow || targetWindow.isDestroyed()) {
     return;
   }
+  const currentUrl = targetWindow.webContents.getURL();
+  if (currentUrl.includes('/login/dashboard/') || currentUrl.includes('/dashboard/')) {
+    return;
+  }
 
   const logoPath = path.join(__dirname, '../assets/logo-big-login-page.png');
   let logoUrl = '';
@@ -395,25 +399,25 @@ function injectGoiconLoginBranding(targetWindow, errorMessage) {
       const form = document.querySelector('form');
       if (!form) return;
       const existingWrapper = document.querySelector('.truespan-login-container');
-      if (existingWrapper) {
-        return;
-      }
+      const alreadyWrapped = !!existingWrapper;
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'truespan-login-container';
+      if (!alreadyWrapped) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'truespan-login-container';
 
-      const logo = document.createElement('div');
-      logo.className = 'truespan-logo';
-      const img = document.createElement('img');
-      img.src = '${logoUrl}';
-      img.alt = 'Truespan Neighborhood';
-      img.onerror = () => { img.style.display = 'none'; };
-      logo.appendChild(img);
+        const logo = document.createElement('div');
+        logo.className = 'truespan-logo';
+        const img = document.createElement('img');
+        img.src = '${logoUrl}';
+        img.alt = 'Truespan Neighborhood';
+        img.onerror = () => { img.style.display = 'none'; };
+        logo.appendChild(img);
 
-      if (form.parentNode) {
-        form.parentNode.insertBefore(wrapper, form);
-        wrapper.appendChild(logo);
-        wrapper.appendChild(form);
+        if (form.parentNode) {
+          form.parentNode.insertBefore(wrapper, form);
+          wrapper.appendChild(logo);
+          wrapper.appendChild(form);
+        }
       }
 
       const errorMessage = ${errorMessage ? JSON.stringify(errorMessage) : '""'};
@@ -421,7 +425,10 @@ function injectGoiconLoginBranding(targetWindow, errorMessage) {
         const error = document.createElement('div');
         error.className = 'truespan-error';
         error.textContent = errorMessage;
-        wrapper.insertBefore(error, form);
+        const targetWrapper = document.querySelector('.truespan-login-container') || form.parentNode;
+        if (targetWrapper) {
+          targetWrapper.insertBefore(error, form);
+        }
       }
 
       const links = Array.from(document.querySelectorAll('a'));
@@ -449,6 +456,153 @@ function injectGoiconLoginBranding(targetWindow, errorMessage) {
       hideCopyright();
       const observer = new MutationObserver(hideCopyright);
       observer.observe(document.body, { childList: true, subtree: true });
+
+      const storageKeys = {
+        username: 'truespanUsername',
+        password: 'truespanPassword'
+      };
+
+      const getStoredCredentials = async () => {
+        let stored = null;
+        if (window.truespanAuth && typeof window.truespanAuth.getStoredCredentials === 'function') {
+          try {
+            stored = await window.truespanAuth.getStoredCredentials();
+          } catch (err) {
+            stored = null;
+          }
+        }
+        if (stored && stored.username) {
+          return {
+            username: stored.username,
+            password: stored.password || '',
+            keytarAvailable: !!stored.keytarAvailable,
+            source: 'keytar'
+          };
+        }
+        const localUsername = window.localStorage.getItem(storageKeys.username) || '';
+        const localPassword = window.localStorage.getItem(storageKeys.password) || '';
+        if (localUsername) {
+          return {
+            username: localUsername,
+            password: localPassword,
+            keytarAvailable: !!(stored && stored.keytarAvailable),
+            source: 'localStorage'
+          };
+        }
+        return {
+          username: '',
+          password: '',
+          keytarAvailable: !!(stored && stored.keytarAvailable),
+          source: null
+        };
+      };
+
+      const saveStoredCredentials = async (username, password) => {
+        let savedToKeytar = false;
+        if (window.truespanAuth && typeof window.truespanAuth.saveCredentials === 'function') {
+          try {
+            const result = await window.truespanAuth.saveCredentials(username, password);
+            savedToKeytar = !!(result && result.saved);
+          } catch (err) {
+            savedToKeytar = false;
+          }
+        }
+        if (!savedToKeytar) {
+          window.localStorage.setItem(storageKeys.username, username);
+          window.localStorage.setItem(storageKeys.password, password);
+        } else {
+          window.localStorage.removeItem(storageKeys.username);
+          window.localStorage.removeItem(storageKeys.password);
+        }
+      };
+
+      const clearStoredCredentials = async () => {
+        if (window.truespanAuth && typeof window.truespanAuth.clearCredentials === 'function') {
+          try {
+            await window.truespanAuth.clearCredentials();
+          } catch (err) {
+            // ignore
+          }
+        }
+        window.localStorage.removeItem(storageKeys.username);
+        window.localStorage.removeItem(storageKeys.password);
+      };
+
+      const findRememberCheckbox = () => {
+        const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+        const textFor = (checkbox) => {
+          if (!checkbox) return '';
+          const id = checkbox.getAttribute('id');
+          if (id) {
+            const label = document.querySelector(\`label[for="\${id}"]\`);
+            if (label && label.textContent) return label.textContent.toLowerCase();
+          }
+          const parentText = checkbox.parentElement ? checkbox.parentElement.textContent : '';
+          return (parentText || '').toLowerCase();
+        };
+        for (const checkbox of checkboxes) {
+          const text = textFor(checkbox);
+          if (text.includes('keep me logged') || text.includes('remember')) {
+            return checkbox;
+          }
+        }
+        return null;
+      };
+
+      const attachRememberHandlers = () => {
+        if (!form || form.getAttribute('data-truespan-remember') === '1') {
+          return;
+        }
+        form.setAttribute('data-truespan-remember', '1');
+        const checkbox = findRememberCheckbox();
+        if (checkbox) {
+          checkbox.addEventListener('change', () => {
+            if (!checkbox.checked) {
+              clearStoredCredentials();
+            }
+          });
+        }
+        form.addEventListener('submit', () => {
+          const usernameField = document.querySelector('input[name="username"], input[type="email"], input[name="email"]');
+          const passwordField = document.querySelector('input[name="password"]');
+          const username = usernameField ? usernameField.value.trim() : '';
+          const password = passwordField ? passwordField.value : '';
+          const remember = checkbox ? checkbox.checked : false;
+          if (remember && username && password) {
+            saveStoredCredentials(username, password);
+          } else {
+            clearStoredCredentials();
+          }
+        });
+      };
+
+      const prefillStored = async () => {
+        try {
+          const stored = await getStoredCredentials();
+          if (!stored || !stored.username) {
+            return;
+          }
+          const usernameField = document.querySelector('input[name="username"], input[type="email"], input[name="email"]');
+          const passwordField = document.querySelector('input[name="password"]');
+          if (usernameField && !usernameField.value) {
+            usernameField.value = stored.username;
+            usernameField.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (passwordField && stored.password && !passwordField.value) {
+            passwordField.value = stored.password;
+            passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          const checkbox = findRememberCheckbox();
+          if (checkbox) {
+            checkbox.checked = true;
+          }
+        } catch (err) {
+          // No-op: keep login page functional even if preload is unavailable.
+        }
+      };
+
+      attachRememberHandlers();
+      prefillStored();
     })();
   `;
 
@@ -502,10 +656,11 @@ function createLoginWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload-login.js')
     },
-    resizable: false,
-    maximizable: false,
+    resizable: true,
+    maximizable: true,
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../assets/icon.png')
@@ -548,10 +703,11 @@ function createLoginWindowWithError(errorMessage) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload-login.js')
     },
-    resizable: false,
-    maximizable: false,
+    resizable: true,
+    maximizable: true,
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../assets/icon.png')
@@ -774,13 +930,16 @@ ipcMain.handle('open-forgot-password', async () => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload-login.js')
     },
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../assets/icon.png'),
     parent: loginWindow || mainWindow, // Make it a child of login or main window
-    modal: false
+    modal: false,
+    resizable: true,
+    maximizable: true
   });
 
   // Load the forgot password page
