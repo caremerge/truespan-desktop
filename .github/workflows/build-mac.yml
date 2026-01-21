@@ -150,12 +150,12 @@ jobs:
           exit 1
         fi
         
-        # Verify keytar is NOT present
+        # Verify keytar IS present
         if grep -q "keytar" /tmp/app-verify/package.json; then
-          echo "❌ ERROR: keytar found in built app!"
-          exit 1
+          echo "✅ Verified: keytar is present in built app"
         else
-          echo "✅ Verified: keytar is not in built app"
+          echo "❌ ERROR: keytar missing from built app!"
+          exit 1
         fi
         
         # Check for any .node files
