@@ -142,10 +142,10 @@ jobs:
           cat /tmp/app-verify/package.json | grep -A 5 '"dependencies"'
           
           if grep -q "keytar" /tmp/app-verify/package.json; then
-            echo "❌ ERROR: keytar found in built app!"
-            exit 1
+            echo "✅ Verified: keytar is present in built app"
           else
-            echo "✅ Verified: keytar is not in built app"
+            echo "❌ ERROR: keytar missing from built app!"
+            exit 1
           fi
           
           echo "Checking for native modules:"
