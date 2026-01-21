@@ -148,12 +148,44 @@
             transform: none;
         }
 
+        .update-actions {
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .check-updates-btn {
+            background: transparent;
+            border: 1px solid rgba(28, 66, 255, 0.4);
+            color: #1C42FF;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .check-updates-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .error-message {
             color: #e74c3c;
             font-size: 14px;
             margin-top: 10px;
             text-align: center;
             display: none;
+        }
+
+        .update-status {
+            color: #1C1463;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+            background: #f5f7ff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(28, 66, 255, 0.2);
         }
 
         .auto-login-message {
@@ -230,6 +262,12 @@
             </div>
 
             <div class="error-message" id="errorMessage"></div>
+            <div class="update-status" id="updateStatus"></div>
+            <div class="update-actions">
+                <button type="button" class="check-updates-btn" id="checkUpdatesBtn">
+                    Check for updates
+                </button>
+            </div>
 
             <div style="text-align: center; margin-top: 15px;">
                 <a href="#" id="forgotPasswordLink" style="color: #1C42FF; text-decoration: none; font-size: 14px;">Forgot Password?</a>
@@ -250,33 +288,122 @@
         // Flag to prevent multiple simultaneous login attempts
         let isLoggingIn = false;
 
-        // Load stored credentials on startup (localStorage-based)
+        async function loadStoredCredentials() {
+            let keytarAvailable = false;
+            try {
+                const stored = await ipcRenderer.invoke('get-stored-credentials');
+                keytarAvailable = !!(stored && stored.keytarAvailable);
+                if (stored && stored.username) {
+                    return {
+                        username: stored.username,
+                        password: stored.password || '',
+                        source: 'keytar',
+                        keytarAvailable
+                    };
+                }
+            } catch (error) {
+                console.warn('Keytar unavailable, falling back to localStorage:', error);
+            }
+
+            const storedUsername = localStorage.getItem('truespanUsername');
+            const storedPassword = localStorage.getItem('truespanPassword') || '';
+            if (storedUsername) {
+                return {
+                    username: storedUsername,
+                    password: storedPassword,
+                    source: 'localStorage',
+                    keytarAvailable
+                };
+            }
+
+            return { username: '', password: '', source: null, keytarAvailable };
+        }
+
+        async function saveStoredCredentials(username, password) {
+            try {
+                const result = await ipcRenderer.invoke('set-stored-credentials', { username, password });
+                if (result && result.saved) {
+                    localStorage.removeItem('truespanUsername');
+                    localStorage.removeItem('truespanPassword');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error saving credentials to keytar:', error);
+            }
+
+            // Fallback to localStorage
+            localStorage.setItem('truespanUsername', username);
+            localStorage.setItem('truespanPassword', password);
+            return false;
+        }
+
+        async function clearStoredCredentials() {
+            try {
+                await ipcRenderer.invoke('clear-stored-credentials');
+            } catch (error) {
+                console.error('Error clearing credentials from keytar:', error);
+            }
+
+            localStorage.removeItem('truespanUsername');
+            localStorage.removeItem('truespanPassword');
+        }
+
+        // Load stored credentials on startup (keytar first, localStorage fallback)
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('Login page loaded');
             
             try {
-                // Load credentials from localStorage
-                const storedUsername = localStorage.getItem('truespanUsername');
-                const storedPassword = localStorage.getItem('truespanPassword');
+                const stored = await loadStoredCredentials();
                 
-                if (storedUsername) {
+                if (stored.username) {
                     console.log('Found stored credentials, pre-filling form...');
                     
                     // Pre-fill the form fields
-                    document.getElementById('username').value = storedUsername;
-                    if (storedPassword) {
-                        document.getElementById('password').value = storedPassword;
+                    document.getElementById('username').value = stored.username;
+                    if (stored.password) {
+                        document.getElementById('password').value = stored.password;
                     }
                     document.getElementById('rememberMe').checked = true;
                     
                     // Focus password field if it's empty, otherwise focus Sign In button
-                    if (!storedPassword) {
+                    if (!stored.password) {
                         document.getElementById('password').focus();
+                    }
+                }
+
+                // Migrate from localStorage to keytar when available
+                if (stored.source === 'localStorage' && stored.keytarAvailable) {
+                    const migrated = await ipcRenderer.invoke('set-stored-credentials', {
+                        username: stored.username,
+                        password: stored.password || ''
+                    });
+                    if (migrated && migrated.saved) {
+                        localStorage.removeItem('truespanUsername');
+                        localStorage.removeItem('truespanPassword');
                     }
                 }
             } catch (error) {
                 console.error('Error loading stored credentials:', error);
             }
+        });
+
+        ipcRenderer.on('update-status', (_event, payload) => {
+            const statusDiv = document.getElementById('updateStatus');
+            if (!statusDiv || !payload || !payload.show) {
+                return;
+            }
+            const details = payload.details ? ` (${payload.details})` : '';
+            statusDiv.textContent = `${payload.status}${details}`;
+            statusDiv.style.display = 'block';
+        });
+
+        document.getElementById('checkUpdatesBtn').addEventListener('click', async () => {
+            const statusDiv = document.getElementById('updateStatus');
+            if (statusDiv) {
+                statusDiv.textContent = 'checking-for-update';
+                statusDiv.style.display = 'block';
+            }
+            await ipcRenderer.invoke('check-for-updates');
         });
 
         // Handle form submission
@@ -304,15 +431,12 @@
             hideAutoLoginMessage();
 
             try {
-                // Save credentials to localStorage if "Remember Me" is checked
+                // Save credentials if "Remember Me" is checked (keytar first, localStorage fallback)
                 if (rememberMe) {
-                    localStorage.setItem('truespanUsername', username);
-                    localStorage.setItem('truespanPassword', password);
-                    console.log('Credentials saved to localStorage');
+                    const savedToKeytar = await saveStoredCredentials(username, password);
+                    console.log(savedToKeytar ? 'Credentials saved to keytar' : 'Credentials saved to localStorage');
                 } else {
-                    // Clear stored credentials if not remembering
-                    localStorage.removeItem('truespanUsername');
-                    localStorage.removeItem('truespanPassword');
+                    await clearStoredCredentials();
                 }
 
                 const result = await ipcRenderer.invoke('login', {
@@ -348,9 +472,8 @@
             if (!e.target.checked) {
                 // Clear stored credentials if unchecking remember me
                 try {
-                    localStorage.removeItem('truespanUsername');
-                    localStorage.removeItem('truespanPassword');
-                    console.log('Credentials cleared from localStorage');
+                    clearStoredCredentials();
+                    console.log('Credentials cleared');
                 } catch (error) {
                     console.error('Error clearing credentials:', error);
                 }

@@ -40,6 +40,11 @@ function loadEnvFile() {
 loadEnvFile();
 
 exports.default = async function(configuration) {
+  if (process.env.SKIP_SIGNING === '1' || process.env.SKIP_SIGNING === 'true') {
+    console.log(`\n🔕 Skipping signing for ${path.basename(configuration.path)} (SKIP_SIGNING enabled)\n`);
+    return;
+  }
+
   // The file to be signed
   const fileToSign = configuration.path;
   

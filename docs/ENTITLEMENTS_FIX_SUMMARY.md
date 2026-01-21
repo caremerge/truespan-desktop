@@ -63,9 +63,9 @@
 ## Build Command
 
 ```bash
-export APPLE_ID="chase.robertson@goicon.com"
-export APPLE_APP_SPECIFIC_PASSWORD="yhpc-yxkp-qyqf-dqnx"
-export APPLE_TEAM_ID="C42TKCA35H"
+export APPLE_ID="your-apple-id@email.com"
+export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+export APPLE_TEAM_ID="XXXXXXXXXX"
 
 npm run build:mac
 ```

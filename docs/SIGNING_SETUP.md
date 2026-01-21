@@ -22,7 +22,7 @@
 ESIGNER_USERNAME=your-email@example.com
 ESIGNER_PASSWORD=your-password
 ESIGNER_CREDENTIAL_ID=your-credential-id
-ESIGNER_TOTP_SECRET=Ip8/Gq+Bhrc/UGu+2y/z2v/UVGB6WP9CBZKAIbHckdOiQ=
+ESIGNER_TOTP_SECRET=your-totp-secret
 ```
 
 **⚠️ IMPORTANT:** The `.env` file is already in `.gitignore` - never commit credentials to Git!
@@ -31,7 +31,7 @@ ESIGNER_TOTP_SECRET=Ip8/Gq+Bhrc/UGu+2y/z2v/UVGB6WP9CBZKAIbHckdOiQ=
 
 From your eSigner portal screenshot, copy the **secret code** (the long string in the text box below the QR code).
 
-Example from your screenshot: `Ip8/Gq+Bhrc/UGu+2y/z2v/UVGB6WP9CBZKAIbHckdOiQ=`
+Example from your portal: `your-totp-secret`
 
 ### 3. Get Your Credential ID
 
