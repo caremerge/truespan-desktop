@@ -283,7 +283,8 @@
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
+        const ipc = window.truespanIPC;
+        const auth = window.truespanAuth;
 
         // Flag to prevent multiple simultaneous login attempts
         let isLoggingIn = false;
@@ -291,7 +292,10 @@
         async function loadStoredCredentials() {
             let keytarAvailable = false;
             try {
-                const stored = await ipcRenderer.invoke('get-stored-credentials');
+                if (!auth || typeof auth.getStoredCredentials !== 'function') {
+                    throw new Error('Auth bridge unavailable');
+                }
+                const stored = await auth.getStoredCredentials();
                 keytarAvailable = !!(stored && stored.keytarAvailable);
                 if (stored && stored.username) {
                     return {
@@ -321,7 +325,10 @@
 
         async function saveStoredCredentials(username, password) {
             try {
-                const result = await ipcRenderer.invoke('set-stored-credentials', { username, password });
+                if (!auth || typeof auth.saveCredentials !== 'function') {
+                    throw new Error('Auth bridge unavailable');
+                }
+                const result = await auth.saveCredentials(username, password);
                 if (result && result.saved) {
                     localStorage.removeItem('truespanUsername');
                     localStorage.removeItem('truespanPassword');
@@ -339,7 +346,9 @@
 
         async function clearStoredCredentials() {
             try {
-                await ipcRenderer.invoke('clear-stored-credentials');
+                if (auth && typeof auth.clearCredentials === 'function') {
+                    await auth.clearCredentials();
+                }
             } catch (error) {
                 console.error('Error clearing credentials from keytar:', error);
             }
@@ -372,11 +381,8 @@
                 }
 
                 // Migrate from localStorage to keytar when available
-                if (stored.source === 'localStorage' && stored.keytarAvailable) {
-                    const migrated = await ipcRenderer.invoke('set-stored-credentials', {
-                        username: stored.username,
-                        password: stored.password || ''
-                    });
+                if (stored.source === 'localStorage' && stored.keytarAvailable && auth && typeof auth.saveCredentials === 'function') {
+                    const migrated = await auth.saveCredentials(stored.username, stored.password || '');
                     if (migrated && migrated.saved) {
                         localStorage.removeItem('truespanUsername');
                         localStorage.removeItem('truespanPassword');
@@ -387,7 +393,8 @@
             }
         });
 
-        ipcRenderer.on('update-status', (_event, payload) => {
+        if (ipc && typeof ipc.onUpdateStatus === 'function') {
+            ipc.onUpdateStatus((payload) => {
             const statusDiv = document.getElementById('updateStatus');
             if (!statusDiv || !payload || !payload.show) {
                 return;
@@ -395,7 +402,8 @@
             const details = payload.details ? ` (${payload.details})` : '';
             statusDiv.textContent = `${payload.status}${details}`;
             statusDiv.style.display = 'block';
-        });
+            });
+        }
 
         document.getElementById('checkUpdatesBtn').addEventListener('click', async () => {
             const statusDiv = document.getElementById('updateStatus');
@@ -403,7 +411,9 @@
                 statusDiv.textContent = 'checking-for-update';
                 statusDiv.style.display = 'block';
             }
-            await ipcRenderer.invoke('check-for-updates');
+            if (ipc && typeof ipc.invoke === 'function') {
+                await ipc.invoke('check-for-updates');
+            }
         });
 
         // Handle form submission
@@ -439,11 +449,10 @@
                     await clearStoredCredentials();
                 }
 
-                const result = await ipcRenderer.invoke('login', {
-                    username,
-                    password,
-                    rememberMe: false  // Don't pass to backend since we handle it in frontend
-                });
+                let result = { success: false, error: 'Login bridge unavailable' };
+                if (auth && typeof auth.login === 'function') {
+                    result = await auth.login(username, password);
+                }
 
                 console.log('Login result received:', result);
 
@@ -531,7 +540,9 @@
         // Handle Forgot Password link
         document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
             e.preventDefault();
-            ipcRenderer.invoke('open-forgot-password');
+            if (auth && typeof auth.openForgotPassword === 'function') {
+                auth.openForgotPassword();
+            }
         });
     </script>
 </body>
