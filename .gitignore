@@ -67,6 +67,8 @@ app_specific_password
 GITHUB_SECRETS_EXACT_VALUES.txt
 mac env.txt
 CertificateSigningRequest-certSigningRequest
+CertificateSigningRequest*.certSigningRequest
+hwin
 apple-dev-private-key.key
 developerID_application.cer
 

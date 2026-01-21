@@ -78,6 +78,39 @@ npm install
 
 ## 🚀 Publishing Updates
 
+### Manual Publishing (No GitHub Actions)
+
+If you want to build locally and upload releases manually, you have two options.
+
+#### Option A: Local build + automatic GitHub release (recommended)
+
+This still uses GitHub, but no Actions. You run the publish command locally and it creates the release + uploads assets for you.
+
+1. Set `GH_TOKEN` (repo scope) in your shell.
+2. Bump the version in `package.json`.
+3. Run:
+   ```bash
+   npm run publish
+   ```
+
+This produces and uploads **all** required artifacts (installers, `latest.yml`, and blockmaps), which is what auto-updater needs.
+
+#### Option B: Local build + manual upload (fully manual)
+
+If you do not want electron-builder to publish at all:
+
+1. Bump the version in `package.json`.
+2. Build without publishing:
+   ```bash
+   npm run dist
+   ```
+3. Create a GitHub release (tag must match the version, e.g. `v1.0.2`).
+4. Upload **all** files from `dist/` that match this version, especially:
+   - Windows: `.exe` (or `.msi` if you add it), `latest.yml`, and `*.blockmap`
+   - macOS: `.dmg`, `latest-mac.yml`, and `*.blockmap`
+
+The `latest*.yml` and `*.blockmap` files are required for auto-updates. If they are missing, users will not receive updates.
+
 ### First Time Publishing (Version 1.0.0)
 
 1. Make sure your `package.json` shows `"version": "1.0.0"`
@@ -103,9 +136,12 @@ npm install
 
 When you want to release a new version:
 
-1. **Update the version** in `package.json`:
-   ```json
-   "version": "1.0.1"  // Increment from 1.0.0
+1. **Update the version** in `package.json` (or use the helper scripts):
+   ```bash
+   npm run version:patch
+   # or: npm run version:minor
+   # or: npm run version:major
+   # or: npm run version:set -- 1.2.3
    ```
 
 2. **Build and publish**:

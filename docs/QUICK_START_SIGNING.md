@@ -25,9 +25,9 @@ Create a file named `.env` in your project root:
 
 ```env
 ESIGNER_USERNAME=your@email.com
-ESIGNER_PASSWORD=YourPassword123
+ESIGNER_PASSWORD=your-password
 ESIGNER_CREDENTIAL_ID=abc123-def456-ghi789
-ESIGNER_TOTP_SECRET=Ip8/Gq+Bhrc/UGu+2y/z2v/UVGB6WP9CBZKAIbHckdOiQ=
+ESIGNER_TOTP_SECRET=your-totp-secret
 ```
 
 **Replace with your actual values!**
