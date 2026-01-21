@@ -555,14 +555,38 @@ function injectGoiconLoginBranding(targetWindow, errorMessage) {
         }
         form.setAttribute('data-truespan-remember', '1');
         const checkbox = findRememberCheckbox();
-        if (checkbox) {
-          checkbox.addEventListener('change', () => {
-            if (!checkbox.checked) {
-              clearStoredCredentials();
+        const ensureForgetButton = () => {
+          if (document.querySelector('.truespan-forget-me')) {
+            return;
+          }
+          if (!form) {
+            return;
+          }
+          const actionsRow = document.createElement('div');
+          actionsRow.className = 'truespan-forget-me';
+          actionsRow.style.marginTop = '8px';
+          actionsRow.style.textAlign = 'center';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = 'Forget me';
+          button.style.background = 'transparent';
+          button.style.border = 'none';
+          button.style.color = '#1C42FF';
+          button.style.cursor = 'pointer';
+          button.style.fontSize = '12px';
+          button.style.textDecoration = 'underline';
+          button.addEventListener('click', () => {
+            clearStoredCredentials();
+            if (checkbox) {
+              checkbox.checked = false;
             }
           });
-        }
-        form.addEventListener('submit', () => {
+          actionsRow.appendChild(button);
+          form.appendChild(actionsRow);
+        };
+
+        ensureForgetButton();
+        const handleRememberSubmission = () => {
           const usernameField = document.querySelector('input[name="username"], input[type="email"], input[name="email"]');
           const passwordField = document.querySelector('input[name="password"]');
           const username = usernameField ? usernameField.value.trim() : '';
@@ -570,10 +594,19 @@ function injectGoiconLoginBranding(targetWindow, errorMessage) {
           const remember = checkbox ? checkbox.checked : false;
           if (remember && username && password) {
             saveStoredCredentials(username, password);
-          } else {
-            clearStoredCredentials();
           }
-        });
+        };
+
+        const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (submitButton) {
+          submitButton.addEventListener('click', handleRememberSubmission);
+        }
+        form.addEventListener('submit', handleRememberSubmission, true);
+        form.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            handleRememberSubmission();
+          }
+        }, true);
       };
 
       const prefillStored = async () => {
