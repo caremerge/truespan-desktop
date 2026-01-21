@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'  # Trigger on version tags like v1.0.0
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      sign_windows:
+        description: 'Enable Windows e-signing (eSigner)'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write  # Allow creating releases and uploading assets
@@ -165,15 +170,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Setup eSigner credentials
-        run: |
-          echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
-          echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
-          echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
-          echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
+    - name: Setup eSigner credentials
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true'
+      run: |
+        echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
+        echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
+        echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
+        echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
       
-      - name: Build Windows app
-        run: npm run build:win
+    - name: Build Windows app
+      env:
+        SKIP_SIGNING: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true' && '0' || '1' }}
+      run: npm run build:win
       
       - name: Upload Windows Installer to Release
         uses: actions/upload-release-asset@v1
