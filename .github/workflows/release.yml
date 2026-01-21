@@ -117,6 +117,16 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npm run build:mac -- --publish never
+
+      - name: Locate DMG
+        id: find_dmg
+        run: |
+          DMG_PATH=$(find dist -maxdepth 2 -name "*.dmg" | head -1)
+          if [ -z "$DMG_PATH" ]; then
+            echo "DMG not found in dist/"
+            exit 1
+          fi
+          echo "dmg_path=$DMG_PATH" >> $GITHUB_OUTPUT
       
       - name: Verify built app
         run: |
@@ -152,8 +162,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/Truespan Neighborhood-1.0.0-universal.dmg
-          asset_name: TrueSpan-Living-${{ needs.create-release.outputs.version }}-universal.dmg
+          asset_path: ${{ steps.find_dmg.outputs.dmg_path }}
+          asset_name: Truespan-Neighborhood-${{ needs.create-release.outputs.version }}-universal.dmg
           asset_content_type: application/x-apple-diskimage
 
   build-windows:
@@ -170,18 +180,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-    - name: Setup eSigner credentials
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true'
-      run: |
-        echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
-        echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
-        echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
-        echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
+      - name: Setup eSigner credentials
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true'
+        run: |
+          echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
+          echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
+          echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
+          echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
       
-    - name: Build Windows app
-      env:
-        SKIP_SIGNING: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true' && '0' || '1' }}
-      run: npm run build:win
+      - name: Build Windows app
+        env:
+          SKIP_SIGNING: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true' && '0' || '1' }}
+        run: npm run build:win
+
+      - name: Locate Windows installer
+        id: find_windows_installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path dist -Filter "*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            Write-Error "Windows installer not found in dist/"
+            exit 1
+          }
+          "installer_path=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
       
       - name: Upload Windows Installer to Release
         uses: actions/upload-release-asset@v1
@@ -189,7 +210,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./dist/Truespan Neighborhood Setup 1.0.0.exe
-          asset_name: TrueSpan-Living-Setup-${{ needs.create-release.outputs.version }}.exe
+          asset_path: ${{ steps.find_windows_installer.outputs.installer_path }}
+          asset_name: Truespan-Neighborhood-Setup-${{ needs.create-release.outputs.version }}.exe
           asset_content_type: application/x-msdownload
 
