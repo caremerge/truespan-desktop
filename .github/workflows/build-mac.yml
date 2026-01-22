@@ -188,20 +188,29 @@ jobs:
         fi
         echo "dmg_path=$DMG_PATH" >> $GITHUB_OUTPUT
 
-    - name: Locate update ZIP + latest-mac.yml
+    - name: Locate update ZIP + metadata
       id: find_update_assets
       run: |
-        ZIP_PATH=$(find dist -maxdepth 2 -name "*mac*.zip" ! -name "TrueSpan-Living-*.zip" | head -1)
+        ZIP_PATH=$(find dist -maxdepth 1 -name "*-mac.zip" | head -1)
         if [ -z "$ZIP_PATH" ]; then
           echo "Update ZIP not found in dist/"
+          find dist -maxdepth 2 -type f -print
           exit 1
         fi
-        LATEST_YML=$(find dist -maxdepth 2 -name "latest-mac.yml" | head -1)
+        BLOCKMAP_PATH=$(find dist -maxdepth 1 -name "*-mac.zip.blockmap" | head -1)
+        if [ -z "$BLOCKMAP_PATH" ]; then
+          echo "Blockmap not found in dist/"
+          find dist -maxdepth 2 -type f -print
+          exit 1
+        fi
+        LATEST_YML=$(find dist -maxdepth 1 -name "latest-mac.yml" | head -1)
         if [ -z "$LATEST_YML" ]; then
           echo "latest-mac.yml not found in dist/"
+          find dist -maxdepth 2 -type f -print
           exit 1
         fi
         echo "zip_path=$ZIP_PATH" >> $GITHUB_OUTPUT
+        echo "blockmap_path=$BLOCKMAP_PATH" >> $GITHUB_OUTPUT
         echo "latest_yml=$LATEST_YML" >> $GITHUB_OUTPUT
 
     - name: Upload release assets (DMG + auto-update)
@@ -209,9 +218,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        TAG="${{ github.ref_name }}"
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.release_tag }}" ]; then
-          TAG="${{ inputs.release_tag }}"
+        TAG="${{ inputs.release_tag }}"
+        if [ -z "$TAG" ]; then
+          TAG="${{ github.ref_name }}"
         fi
         if [ "$TAG" = "main" ] || [ -z "$TAG" ]; then
           echo "Release tag is not set (got: '$TAG'). Provide inputs.release_tag when dispatching."
@@ -221,6 +230,7 @@ jobs:
         gh release upload "$TAG" "${{ steps.find_dmg.outputs.dmg_path }}" --clobber
         echo "Uploading auto-update assets to release: $TAG"
         gh release upload "$TAG" "${{ steps.find_update_assets.outputs.zip_path }}" --clobber
+        gh release upload "$TAG" "${{ steps.find_update_assets.outputs.blockmap_path }}" --clobber
         gh release upload "$TAG" "${{ steps.find_update_assets.outputs.latest_yml }}" --clobber
     
     - name: Upload DMG artifact
@@ -235,6 +245,7 @@ jobs:
         name: macos-update-assets
         path: |
           ${{ steps.find_update_assets.outputs.zip_path }}
+          ${{ steps.find_update_assets.outputs.blockmap_path }}
           ${{ steps.find_update_assets.outputs.latest_yml }}
     
     - name: Create ZIP of app bundle
