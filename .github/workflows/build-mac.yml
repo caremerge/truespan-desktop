@@ -191,26 +191,45 @@ jobs:
     - name: Locate update ZIP + metadata
       id: find_update_assets
       run: |
-        ZIP_PATH=$(find dist -maxdepth 1 -name "*-mac.zip" | head -1)
-        if [ -z "$ZIP_PATH" ]; then
-          echo "Update ZIP not found in dist/"
-          find dist -maxdepth 2 -type f -print
-          exit 1
-        fi
-        BLOCKMAP_PATH=$(find dist -maxdepth 1 -name "*-mac.zip.blockmap" | head -1)
-        if [ -z "$BLOCKMAP_PATH" ]; then
-          echo "Blockmap not found in dist/"
-          find dist -maxdepth 2 -type f -print
-          exit 1
-        fi
         LATEST_YML=$(find dist -maxdepth 1 -name "latest-mac.yml" | head -1)
         if [ -z "$LATEST_YML" ]; then
           echo "latest-mac.yml not found in dist/"
           find dist -maxdepth 2 -type f -print
           exit 1
         fi
-        echo "zip_path=$ZIP_PATH" >> $GITHUB_OUTPUT
-        echo "blockmap_path=$BLOCKMAP_PATH" >> $GITHUB_OUTPUT
+
+        UPDATE_NAME=$(sed -n 's/^path: //p' "$LATEST_YML" | head -1)
+        if [ -z "$UPDATE_NAME" ]; then
+          echo "Could not read update path from latest-mac.yml"
+          cat "$LATEST_YML"
+          exit 1
+        fi
+
+        ZIP_PATH=$(find dist -maxdepth 1 -name "*-mac.zip" | head -1)
+        if [ -z "$ZIP_PATH" ]; then
+          echo "Update ZIP not found in dist/"
+          find dist -maxdepth 2 -type f -print
+          exit 1
+        fi
+
+        BLOCKMAP_PATH=$(find dist -maxdepth 1 -name "*-mac.zip.blockmap" | head -1)
+        if [ -z "$BLOCKMAP_PATH" ]; then
+          echo "Blockmap not found in dist/"
+          find dist -maxdepth 2 -type f -print
+          exit 1
+        fi
+
+        TARGET_ZIP="dist/$UPDATE_NAME"
+        TARGET_BLOCKMAP="${TARGET_ZIP}.blockmap"
+        if [ "$(basename "$ZIP_PATH")" != "$UPDATE_NAME" ]; then
+          cp "$ZIP_PATH" "$TARGET_ZIP"
+        fi
+        if [ "$(basename "$BLOCKMAP_PATH")" != "${UPDATE_NAME}.blockmap" ]; then
+          cp "$BLOCKMAP_PATH" "$TARGET_BLOCKMAP"
+        fi
+
+        echo "zip_path=$TARGET_ZIP" >> $GITHUB_OUTPUT
+        echo "blockmap_path=$TARGET_BLOCKMAP" >> $GITHUB_OUTPUT
         echo "latest_yml=$LATEST_YML" >> $GITHUB_OUTPUT
 
     - name: Upload release assets (DMG + auto-update)
