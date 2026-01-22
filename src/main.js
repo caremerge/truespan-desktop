@@ -21,6 +21,351 @@ let isLoggedOut = false; // Flag to track if user manually logged out
 let deeplinkingUrl; // Store deep link URL to open after login
 let isAuthenticating = false; // Flag to prevent duplicate login processing
 let lastUpdateStatusAt = 0;
+const windowHistories = new Map();
+const backButtonAttached = new Set();
+const enhancedWebContents = new Set();
+
+function registerDocumentStartScript(targetWebContents, source) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  if (typeof targetWebContents.addScriptToExecuteOnNewDocument === 'function') {
+    targetWebContents.addScriptToExecuteOnNewDocument(source);
+    return;
+  }
+  try {
+    if (!targetWebContents.debugger.isAttached()) {
+      targetWebContents.debugger.attach('1.3');
+    }
+    targetWebContents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', { source });
+  } catch (error) {
+    console.error('Failed to register document-start script:', error);
+  }
+}
+
+function attachConsoleForwarder(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  if (targetWebContents.__tsConsoleForwarderAttached) {
+    return;
+  }
+  targetWebContents.__tsConsoleForwarderAttached = true;
+  targetWebContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const lowerMessage = String(message).toLowerCase();
+    if (
+      lowerMessage.includes('pdf') ||
+      lowerMessage.includes('worker') ||
+      lowerMessage.includes('withresolvers')
+    ) {
+      const url = targetWebContents.getURL ? targetWebContents.getURL() : '';
+      console.log(`[webconsole:${level}] ${message} (${sourceId}:${line}) ${url}`);
+    }
+  });
+}
+
+function registerFrameNavigationFallback(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  if (targetWebContents.__tsFrameNavFallbackAttached) {
+    return;
+  }
+  targetWebContents.__tsFrameNavFallbackAttached = true;
+  try {
+    if (!targetWebContents.debugger.isAttached()) {
+      targetWebContents.debugger.attach('1.3');
+    }
+    targetWebContents.debugger.sendCommand('Page.enable');
+  } catch (error) {
+    console.error('Failed to enable Page domain for frame fallback:', error);
+    return;
+  }
+  targetWebContents.debugger.on('message', (_event, method, params) => {
+    if (method === 'Page.frameNavigated' && params && params.frame) {
+      try {
+        const mainFrame = targetWebContents.mainFrame;
+        if (!mainFrame || !mainFrame.frames) {
+          return;
+        }
+        const currentFrames = mainFrame.frames;
+        currentFrames.forEach(frame => injectPromisePolyfillIntoFrame(frame));
+      } catch (error) {
+        console.error('Failed to inject polyfill on frame navigation:', error);
+      }
+    }
+  });
+}
+
+function installPromiseWithResolversPolyfill(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  const polyfillScript = `
+    if (typeof Promise.withResolvers !== 'function') {
+      Promise.withResolvers = () => {
+        let resolve;
+        let reject;
+        const promise = new Promise((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        return { promise, resolve, reject };
+      };
+    }
+
+    (function patchWorkerForPromiseResolvers() {
+      if (typeof Worker !== 'function') {
+        return;
+      }
+      const OriginalWorker = Worker;
+      const shouldWrap = (scriptUrl) => {
+        if (!scriptUrl) return false;
+        const value = String(scriptUrl);
+        return (
+          value.includes('pdf.worker') ||
+          value.includes('pdfjs') ||
+          value.includes('worker')
+        );
+      };
+      const wrapWorkerScript = (scriptUrl, options) => {
+        const isModule = options && options.type === 'module';
+        const importLine = isModule
+          ? \`import "\${scriptUrl}";\`
+          : \`importScripts("\${scriptUrl}");\`;
+        const polyfill = \`
+          if (typeof Promise.withResolvers !== 'function') {
+            Promise.withResolvers = () => {
+              let resolve;
+              let reject;
+              const promise = new Promise((res, rej) => {
+                resolve = res;
+                reject = rej;
+              });
+              return { promise, resolve, reject };
+            };
+          }
+        \`;
+        const blob = new Blob([polyfill + importLine], { type: 'text/javascript' });
+        return URL.createObjectURL(blob);
+      };
+      const PatchedWorker = function(scriptUrl, options) {
+        try {
+          if (shouldWrap(scriptUrl)) {
+            console.info('[ts-worker] wrapping worker', scriptUrl);
+            const wrappedUrl = wrapWorkerScript(scriptUrl, options || {});
+            return new OriginalWorker(wrappedUrl, options);
+          }
+        } catch (error) {
+          // Fall back to original worker if wrapping fails.
+          console.warn('Worker polyfill wrap failed:', error);
+        }
+        return new OriginalWorker(scriptUrl, options);
+      };
+      PatchedWorker.prototype = OriginalWorker.prototype;
+      Worker = PatchedWorker;
+    })();
+  `;
+  registerDocumentStartScript(targetWebContents, polyfillScript);
+}
+
+function injectPromisePolyfillIntoFrame(frame) {
+  if (!frame || typeof frame.executeJavaScript !== 'function') {
+    return;
+  }
+  const script = `
+    if (typeof Promise.withResolvers !== 'function') {
+      Promise.withResolvers = () => {
+        let resolve;
+        let reject;
+        const promise = new Promise((res, rej) => {
+          resolve = res;
+          reject = rej;
+        });
+        return { promise, resolve, reject };
+      };
+    }
+  `;
+  frame.executeJavaScript(script, true).catch(error => {
+    console.error('Failed to inject Promise.withResolvers in frame:', error);
+  });
+}
+
+function ensureBackButtonInjected(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  const injectionScript = `
+    (function() {
+      if (document.getElementById('ts-back-button')) {
+        return;
+      }
+      const button = document.createElement('button');
+      button.id = 'ts-back-button';
+      button.type = 'button';
+      button.textContent = 'Back';
+      button.setAttribute('aria-label', 'Go back');
+      button.style.position = 'fixed';
+      button.style.left = '16px';
+      button.style.top = '36px';
+      button.style.zIndex = '2147483647';
+      button.style.padding = '8px 14px';
+      button.style.borderRadius = '6px';
+      button.style.border = '1px solid rgba(0,0,0,0.15)';
+      button.style.background = '#ffffff';
+      button.style.color = '#1C1463';
+      button.style.fontSize = '13px';
+      button.style.fontWeight = '600';
+      button.style.cursor = 'pointer';
+      button.style.boxShadow = '0 4px 10px rgba(0,0,0,0.12)';
+      button.style.display = 'none';
+      button.style.alignItems = 'center';
+      button.style.gap = '6px';
+      button.addEventListener('click', () => {
+        try {
+          if (window.truespanDesktop && typeof window.truespanDesktop.goBack === 'function') {
+            window.truespanDesktop.goBack();
+          } else {
+            history.back();
+          }
+        } catch (error) {
+          console.warn('Back navigation failed:', error);
+        }
+      });
+      document.body.appendChild(button);
+    })();
+  `;
+  targetWebContents.executeJavaScript(injectionScript).catch(error => {
+    console.error('Failed to inject back button:', error);
+  });
+}
+
+function updateBackButtonVisibility(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  const currentUrl = targetWebContents.getURL ? targetWebContents.getURL() : '';
+  const isLoginUrl =
+    currentUrl.includes('login.goicon.com') ||
+    currentUrl.includes('/login');
+  const isSocialRoute = currentUrl.includes('/social/');
+  const history = windowHistories.get(targetWebContents.id) || [];
+  const shouldShow =
+    !isLoginUrl &&
+    !isSocialRoute &&
+    (targetWebContents.canGoBack() || history.length > 1);
+  const updateScript = `
+    (function() {
+      const button = document.getElementById('ts-back-button');
+      if (!button) return;
+      button.style.display = ${shouldShow ? "'inline-flex'" : "'none'"};
+      button.style.opacity = ${shouldShow ? "'1'" : "'0.45'"};
+      button.style.pointerEvents = ${shouldShow ? "'auto'" : "'none'"};
+    })();
+  `;
+  targetWebContents.executeJavaScript(updateScript).catch(error => {
+    console.error('Failed to update back button visibility:', error);
+  });
+}
+
+function getHistoryForWebContents(targetWebContents) {
+  if (!targetWebContents) {
+    return [];
+  }
+  const id = targetWebContents.id;
+  if (!windowHistories.has(id)) {
+    windowHistories.set(id, []);
+  }
+  return windowHistories.get(id);
+}
+
+function recordHistory(targetWebContents, url) {
+  if (!targetWebContents || !url) {
+    return;
+  }
+  const history = getHistoryForWebContents(targetWebContents);
+  if (!history.length || history[history.length - 1] !== url) {
+    history.push(url);
+  }
+}
+
+function attachBackButtonHandlers(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  if (backButtonAttached.has(targetWebContents.id)) {
+    return;
+  }
+  backButtonAttached.add(targetWebContents.id);
+
+  targetWebContents.on('did-finish-load', () => {
+    ensureBackButtonInjected(targetWebContents);
+    updateBackButtonVisibility(targetWebContents);
+  });
+
+  targetWebContents.on('did-navigate', (_event, navigationUrl) => {
+    recordHistory(targetWebContents, navigationUrl);
+    updateBackButtonVisibility(targetWebContents);
+  });
+
+  targetWebContents.on('did-navigate-in-page', () => {
+    const currentUrl = targetWebContents.getURL ? targetWebContents.getURL() : '';
+    if (currentUrl) {
+      recordHistory(targetWebContents, currentUrl);
+    }
+    updateBackButtonVisibility(targetWebContents);
+  });
+
+  targetWebContents.once('destroyed', () => {
+    backButtonAttached.delete(targetWebContents.id);
+    windowHistories.delete(targetWebContents.id);
+    enhancedWebContents.delete(targetWebContents.id);
+  });
+}
+
+function initializeWebContentsEnhancements(targetWebContents) {
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  if (enhancedWebContents.has(targetWebContents.id)) {
+    return;
+  }
+  enhancedWebContents.add(targetWebContents.id);
+  attachConsoleForwarder(targetWebContents);
+  installPromiseWithResolversPolyfill(targetWebContents);
+  attachBackButtonHandlers(targetWebContents);
+  registerFrameNavigationFallback(targetWebContents);
+
+  targetWebContents.on('did-frame-finish-load', (_event, _isMainFrame, frameProcessId, frameRoutingId) => {
+    try {
+      const mainFrame = targetWebContents.mainFrame;
+      if (!mainFrame || !mainFrame.frames) {
+        return;
+      }
+      const matchingFrame = mainFrame.frames.find(
+        frame => frame.processId === frameProcessId && frame.routingId === frameRoutingId
+      );
+      if (matchingFrame) {
+        injectPromisePolyfillIntoFrame(matchingFrame);
+      } else {
+        // Fallback: attempt to inject into all frames.
+        mainFrame.frames.forEach(frame => injectPromisePolyfillIntoFrame(frame));
+      }
+    } catch (error) {
+      console.error('Failed to inject polyfill into frame:', error);
+    }
+  });
+
+  if (targetWebContents.debugger && targetWebContents.debugger.isAttached()) {
+    targetWebContents.once('destroyed', () => {
+      try {
+        targetWebContents.debugger.detach();
+      } catch (error) {
+        // Ignore detach errors; window is closing.
+      }
+    });
+  }
+}
 
 const INVALID_CREDENTIALS_MESSAGE =
   "We can't find that username and password. You can reset your password or try again.";
@@ -44,6 +389,27 @@ const hasValidAuthTokens = (cookies) => {
   );
 };
 
+const ensureCspDirective = (cspValue, directive, valuesToAdd) => {
+  if (!cspValue) {
+    return cspValue;
+  }
+  const directives = cspValue.split(';').map(value => value.trim()).filter(Boolean);
+  const directiveIndex = directives.findIndex(entry => entry.startsWith(`${directive} `) || entry === directive);
+  const normalizeValues = (values) => new Set(values.filter(Boolean));
+  const valuesToEnsure = normalizeValues(valuesToAdd);
+
+  if (directiveIndex === -1) {
+    directives.push(`${directive} ${Array.from(valuesToEnsure).join(' ')}`);
+    return directives.join('; ');
+  }
+
+  const [currentDirective, ...currentValues] = directives[directiveIndex].split(/\s+/);
+  const merged = new Set(currentValues);
+  valuesToEnsure.forEach(value => merged.add(value));
+  directives[directiveIndex] = `${currentDirective} ${Array.from(merged).join(' ')}`.trim();
+  return directives.join('; ');
+};
+
 // Configuration from config.js
 const WEBSITE_URL = config.GOICON_API_URL;
 const SERVICE_NAME = config.APP_NAME;
@@ -54,6 +420,12 @@ const isDev =
   !app.isPackaged ||
   process.env.NODE_ENV === 'development' ||
   process.argv.includes('--dev');
+const shouldDisableGpu =
+  process.env.DISABLE_GPU === '1' || process.argv.includes('--disable-gpu');
+if (shouldDisableGpu) {
+  app.disableHardwareAcceleration();
+  console.log('Hardware acceleration disabled (DISABLE_GPU=1).');
+}
 const getArgValue = (name) => {
   const prefix = `--${name}=`;
   const match = process.argv.find(arg => arg.startsWith(prefix));
@@ -106,6 +478,16 @@ process.on('unhandledRejection', (reason) => {
 
 app.on('ready', () => {
   console.log('App ready');
+});
+
+app.on('browser-window-created', (_event, window) => {
+  initializeWebContentsEnhancements(window.webContents);
+  try {
+    window.setMenuBarVisibility(false);
+    window.setAutoHideMenuBar(true);
+  } catch (error) {
+    console.warn('Failed to hide menu bar for new window:', error);
+  }
 });
 
 app.on('before-quit', () => {
@@ -792,12 +1174,15 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload-main.js')
     },
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../assets/icon.png')
   });
+
+  initializeWebContentsEnhancements(mainWindow.webContents);
 
   // Load the target URL (either redirect URL or default website)
   console.log('Loading main window with URL:', targetUrl);
@@ -908,6 +1293,7 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
       
       createLoginWindowWithError('Session expired or you have been logged out. Please log in again.');
     }
+
   });
 
   // Also monitor when the page finishes loading to catch login redirects
@@ -919,6 +1305,9 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
     
     const currentUrl = mainWindow.webContents.getURL();
     console.log('Page finished loading:', currentUrl);
+    if (!mainWindowHistory.length || mainWindowHistory[mainWindowHistory.length - 1] !== currentUrl) {
+      mainWindowHistory.push(currentUrl);
+    }
 
     if (USE_GOICON_LOGIN && currentUrl.includes('login.goicon.com')) {
       injectGoiconLoginBranding(mainWindow);
@@ -1245,6 +1634,32 @@ ipcMain.handle('clear-stored-credentials', async () => {
 // Check if user was logged out
 ipcMain.handle('was-logged-out', async () => {
   return isLoggedOut;
+});
+
+ipcMain.on('main-go-back', (event) => {
+  const sender = event.sender;
+  if (!sender || sender.isDestroyed()) {
+    return;
+  }
+  const targetWindow = BrowserWindow.fromWebContents(sender);
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return;
+  }
+  if (sender.canGoBack()) {
+    sender.goBack();
+    return;
+  }
+  const history = getHistoryForWebContents(sender);
+  if (history.length > 1) {
+    // Pop current and navigate to previous.
+    history.pop();
+    const previousUrl = history.pop();
+    if (previousUrl) {
+      targetWindow.webContents.loadURL(previousUrl).catch(error => {
+        console.error('Failed to navigate back:', error);
+      });
+    }
+  }
 });
 
 // Function to authenticate user using a hidden webview (like your backend does)
@@ -2083,6 +2498,49 @@ async function setCookiesInSession(cookies) {
 }
 
 app.whenReady().then(async () => {
+  const mainSession = session.defaultSession;
+  mainSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.goicon.com/*'] },
+    (details, callback) => {
+      const responseHeaders = details.responseHeaders || {};
+      const cspHeaderKey = Object.keys(responseHeaders).find(
+        header => header.toLowerCase() === 'content-security-policy'
+      );
+      if (cspHeaderKey) {
+        const rawHeader = responseHeaders[cspHeaderKey];
+        const cspValue = Array.isArray(rawHeader) ? rawHeader.join('; ') : String(rawHeader || '');
+        let updatedCsp = ensureCspDirective(cspValue, 'worker-src', ['blob:', 'data:']);
+        updatedCsp = ensureCspDirective(updatedCsp, 'child-src', ['blob:', 'data:']);
+        updatedCsp = ensureCspDirective(updatedCsp, 'frame-src', ['blob:', 'data:']);
+        updatedCsp = ensureCspDirective(updatedCsp, 'object-src', ['blob:', 'data:']);
+        if (updatedCsp && updatedCsp !== cspValue) {
+          responseHeaders[cspHeaderKey] = [updatedCsp];
+        }
+      }
+      callback({ responseHeaders });
+    }
+  );
+
+  mainSession.webRequest.onCompleted(
+    { urls: ['*://*.goicon.com/*'] },
+    (details) => {
+      const url = details.url || '';
+      if (url.includes('.pdf') || details.resourceType === 'worker') {
+        console.log('[webrequest]', details.statusCode, details.resourceType, url);
+      }
+    }
+  );
+
+  mainSession.webRequest.onErrorOccurred(
+    { urls: ['*://*.goicon.com/*'] },
+    (details) => {
+      const url = details.url || '';
+      if (url.includes('.pdf') || details.resourceType === 'worker') {
+        console.log('[webrequest-error]', details.error, details.resourceType, url);
+      }
+    }
+  );
+
   // Check for URL on launch (Windows)
   if (process.platform === 'win32') {
     const url = process.argv.find(arg => arg.startsWith('https://goicon.com') || arg.startsWith('https://api.goicon.com'));
