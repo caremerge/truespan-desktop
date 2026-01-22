@@ -49,10 +49,20 @@
       "sign": "./sign.js"
     },
     "mac": {
-      "target": {
-        "target": "dmg",
-        "arch": "universal"
-      },
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
       "icon": "assets/icon.png",
       "category": "public.app-category.business",
       "hardenedRuntime": true,
