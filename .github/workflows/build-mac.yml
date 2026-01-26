@@ -18,6 +18,9 @@ on:
 jobs:
   build-mac:
     runs-on: macos-latest
+    env:
+      LEGACY_RELEASE_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+      LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
     
     steps:
     - name: Checkout code
@@ -253,7 +256,7 @@ jobs:
         gh release upload "$TAG" "${{ steps.find_update_assets.outputs.latest_yml }}" --clobber
 
     - name: Upload release assets to legacy repo (optional)
-      if: (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')) && secrets.LEGACY_RELEASE_TOKEN != ''
+      if: (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')) && env.LEGACY_RELEASE_TOKEN != ''
       env:
         GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
         LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}

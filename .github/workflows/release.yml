@@ -17,6 +17,9 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    env:
+      LEGACY_RELEASE_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+      LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
@@ -65,7 +68,7 @@ jobs:
           prerelease: false
 
       - name: Create legacy release (optional)
-        if: ${{ secrets.LEGACY_RELEASE_TOKEN != '' }}
+        if: ${{ env.LEGACY_RELEASE_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
           LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
@@ -82,6 +85,9 @@ jobs:
   build-mac:
     needs: create-release
     runs-on: macos-latest
+    env:
+      LEGACY_RELEASE_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+      LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
     steps:
       - uses: actions/checkout@v4
       
@@ -182,7 +188,7 @@ jobs:
           asset_content_type: application/x-apple-diskimage
 
       - name: Upload DMG to legacy release (optional)
-        if: ${{ secrets.LEGACY_RELEASE_TOKEN != '' }}
+        if: ${{ env.LEGACY_RELEASE_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
           LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
@@ -195,6 +201,9 @@ jobs:
   build-windows:
     needs: create-release
     runs-on: windows-latest
+    env:
+      LEGACY_RELEASE_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+      LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
     steps:
       - uses: actions/checkout@v4
       
@@ -241,7 +250,7 @@ jobs:
           asset_content_type: application/x-msdownload
 
       - name: Upload Windows Installer to legacy release (optional)
-        if: ${{ secrets.LEGACY_RELEASE_TOKEN != '' }}
+        if: ${{ env.LEGACY_RELEASE_TOKEN != '' }}
         env:
           GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
           LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
