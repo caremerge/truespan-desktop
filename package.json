@@ -30,7 +30,7 @@
     "publish": {
       "provider": "github",
       "owner": "caremerge",
-      "repo": "truespan"
+      "repo": "truespan-desktop"
     },
     "directories": {
       "output": "dist"

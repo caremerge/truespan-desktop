@@ -9,7 +9,7 @@ on:
       sign_windows:
         description: 'Enable Windows e-signing (eSigner)'
         required: false
-        default: 'false'
+        default: 'true'
 
 permissions:
   contents: write  # Allow creating releases and uploading assets
@@ -204,6 +204,7 @@ jobs:
     env:
       LEGACY_RELEASE_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
       LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
+      SIGN_WINDOWS: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.sign_windows == 'true' }}
     steps:
       - uses: actions/checkout@v4
       
@@ -216,16 +217,32 @@ jobs:
         run: npm ci
       
       - name: Setup eSigner credentials
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true'
+        if: env.SIGN_WINDOWS == 'true'
         run: |
           echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
           echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
           echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
           echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
+
+      - name: Download CodeSignTool (eSigner)
+        if: env.SIGN_WINDOWS == 'true'
+        shell: pwsh
+        run: |
+          $toolDir = Join-Path $env:RUNNER_TEMP "CodeSignTool"
+          New-Item -ItemType Directory -Force -Path $toolDir | Out-Null
+          $zipPath = Join-Path $env:RUNNER_TEMP "CodeSignTool.zip"
+          Invoke-WebRequest -Uri "https://app.esigner.com/files/CodeSignTool-v1-3-2-windows/3954004a/download" -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $toolDir -Force
+          $bat = Get-ChildItem -Path $toolDir -Recurse -Filter "CodeSignTool.bat" | Select-Object -First 1
+          if (-not $bat) {
+            Write-Error "CodeSignTool.bat not found after extraction."
+            exit 1
+          }
+          "CODESIGNTOOL_DIR=$($bat.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
       
       - name: Build Windows app
         env:
-          SKIP_SIGNING: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sign_windows == 'true' && '0' || '1' }}
+          SKIP_SIGNING: ${{ env.SIGN_WINDOWS == 'true' && '0' || '1' }}
         run: npm run build:win
 
       - name: Locate Windows installer
