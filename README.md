@@ -2,17 +2,21 @@
 
 A desktop wrapper application for the Truespan web application with custom authentication and "Remember Me" functionality.
 
-## Local Build + GitHub Release Updates
+## GitHub Actions Release Updates
 
-This project is set up for **local build + local signing**, then **publishing to GitHub Releases** so users receive in-app updates.
+This project is set up for **GitHub Actions builds + signing**, then **publishing to GitHub Releases** so users receive in-app updates.
 
 ### One-Time Setup
 
 1. Configure `build.publish` in `package.json`:
    - `owner`: your GitHub username/org
    - `repo`: your GitHub repo name
-2. Create a GitHub Personal Access Token with `repo` scope.
-3. Set `GH_TOKEN` in your shell.
+2. Add GitHub Actions secrets:
+   - `ESIGNER_USERNAME`
+   - `ESIGNER_PASSWORD`
+   - `ESIGNER_CREDENTIAL_ID`
+   - `ESIGNER_TOTP_SECRET`
+   - Optional: `LEGACY_RELEASE_TOKEN`, `LEGACY_RELEASE_REPO`
 
 ### Version Bump
 
@@ -29,20 +33,21 @@ Commit and push the version bump before publishing.
 
 ### Publish Updates (per OS)
 
-You must build/sign on each OS and publish to the same GitHub Release:
+Releases are created and assets are uploaded via GitHub Actions:
 
-- **Windows machine**:
-  ```bash
-  npm run publish:win
-  ```
-- **Mac machine**:
-  ```bash
-  npm run publish:mac
-  ```
+1. Bump the version and push a tag:
+```bash
+npm run version:patch
+git commit -am "Bump version"
+git tag v1.0.8
+git push && git push --tags
+```
+2. The `Create Release` workflow builds:
+   - macOS DMG + auto-update assets
+   - Windows EXE (signed via eSigner)
 
-Both commands upload the installers plus update metadata:
-`latest.yml`, `latest-mac.yml`, and `*.blockmap`.
-These files are required for auto-updates to work.
+You can also run the workflow manually and toggle Windows signing:
+`Actions → Create Release → Run workflow → sign_windows`.
 
 ## Docs
 
