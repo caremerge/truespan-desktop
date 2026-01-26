@@ -1,0 +1,9 @@
+[
+  {
+    "packageFamilyName": "YOUR_PACKAGE_FAMILY_NAME",
+    "paths": [
+      "*"
+    ],
+    "excludePaths": []
+  }
+]

@@ -3,13 +3,8 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.com.truespanliving.desktop",
-        "paths": ["*"],
-        "components": [
-          {
-            "/": "*"
-          }
-        ]
+        "appID": "C42TKCA35H.com.truespanliving.desktop",
+        "paths": ["*"]
       }
     ]
   }

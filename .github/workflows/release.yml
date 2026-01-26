@@ -64,6 +64,21 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Create legacy release (optional)
+        if: ${{ secrets.LEGACY_RELEASE_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+          LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
+        run: |
+          TAG="${{ steps.get_version.outputs.version }}"
+          LEGACY_REPO="${LEGACY_RELEASE_REPO:-ryangalea23/truespan}"
+          echo "Ensuring legacy release exists for $LEGACY_REPO ($TAG)"
+          if ! gh release view "$TAG" --repo "$LEGACY_REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$LEGACY_REPO" \
+              --title "Truespan Neighborhood $TAG" \
+              --notes "Bridge release to move updates to caremerge/truespan."
+          fi
+
   build-mac:
     needs: create-release
     runs-on: macos-latest
@@ -166,6 +181,17 @@ jobs:
           asset_name: Truespan-Neighborhood-${{ needs.create-release.outputs.version }}-universal.dmg
           asset_content_type: application/x-apple-diskimage
 
+      - name: Upload DMG to legacy release (optional)
+        if: ${{ secrets.LEGACY_RELEASE_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+          LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
+        run: |
+          TAG="${{ needs.create-release.outputs.version }}"
+          LEGACY_REPO="${LEGACY_RELEASE_REPO:-ryangalea23/truespan}"
+          gh release upload "$TAG" "${{ steps.find_dmg.outputs.dmg_path }}" \
+            --repo "$LEGACY_REPO" --clobber
+
   build-windows:
     needs: create-release
     runs-on: windows-latest
@@ -213,4 +239,16 @@ jobs:
           asset_path: ${{ steps.find_windows_installer.outputs.installer_path }}
           asset_name: Truespan-Neighborhood-Setup-${{ needs.create-release.outputs.version }}.exe
           asset_content_type: application/x-msdownload
+
+      - name: Upload Windows Installer to legacy release (optional)
+        if: ${{ secrets.LEGACY_RELEASE_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
+          LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
+        shell: pwsh
+        run: |
+          $tag = "${{ needs.create-release.outputs.version }}"
+          $legacyRepo = if ($env:LEGACY_RELEASE_REPO) { $env:LEGACY_RELEASE_REPO } else { "ryangalea23/truespan" }
+          gh release upload $tag "${{ steps.find_windows_installer.outputs.installer_path }}" `
+            --repo $legacyRepo --clobber
 

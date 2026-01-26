@@ -8,5 +8,10 @@
     <true/>
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+      <string>applinks:goicon.com</string>
+      <string>applinks:api.goicon.com</string>
+    </array>
   </dict>
 </plist>

@@ -1,6 +1,6 @@
 {
   "name": "truespan-desktop",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Truespan Neighborhood Desktop Application - Website Wrapper with Custom Authentication",
   "author": {
     "name": "Truespan Neighborhood",
@@ -12,6 +12,7 @@
     "dev": "electron . --dev",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
+    "build:win:appx": "electron-builder --win appx --config build/appx.json",
     "build:mac": "electron-builder --mac",
     "dist": "electron-builder --publish=never",
     "publish": "electron-builder --publish=always",
@@ -28,7 +29,7 @@
     "copyright": "Copyright © 2024 Truespan Neighborhood",
     "publish": {
       "provider": "github",
-      "owner": "ryangalea23",
+      "owner": "caremerge",
       "repo": "truespan"
     },
     "directories": {
@@ -78,7 +79,7 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "https"
+              "goicon"
             ],
             "CFBundleURLName": "com.truespanliving.desktop"
           }
@@ -112,6 +113,14 @@
         "height": 380
       }
     },
+    "protocols": [
+      {
+        "name": "Truespan Neighborhood",
+        "schemes": [
+          "goicon"
+        ]
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true

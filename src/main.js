@@ -602,35 +602,70 @@ autoUpdater.on('error', (err) => {
   emitUpdateStatus('error', err.message || 'Unknown error');
 });
 
-// Handle URLs from Universal Links (Mac) / App Links (Windows)
-function handleDeepLink(url) {
-  console.log('Deep link received:', url);
-  
-  // Handle goicon.com URLs
-  if (url.startsWith('https://goicon.com') || url.startsWith('https://api.goicon.com')) {
-    const targetUrl = url;
-    
-    console.log('Opening URL:', targetUrl);
-    
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      // App is running, navigate to URL
-      try {
-        mainWindow.loadURL(targetUrl);
-        mainWindow.show();
-        mainWindow.focus();
-      } catch (err) {
-        console.error('Error loading deep link in main window:', err);
+const DEEP_LINK_SCHEME = 'goicon';
+
+const normalizeDeepLinkUrl = (rawUrl) => {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return null;
+  }
+  if (rawUrl.startsWith('https://goicon.com') || rawUrl.startsWith('https://api.goicon.com')) {
+    return rawUrl;
+  }
+  if (rawUrl.startsWith(`${DEEP_LINK_SCHEME}://`)) {
+    try {
+      const parsed = new URL(rawUrl);
+      let path = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname : parsed.hostname || '';
+      path = path.replace(/^\/+/, '');
+      if (!path) {
+        path = 'social';
       }
-    } else if (loginWindow && !loginWindow.isDestroyed()) {
-      // Login window is open, store URL to open after login
-      deeplinkingUrl = targetUrl;
-      console.log('Stored URL to open after login:', deeplinkingUrl);
-    } else {
-      // App is starting, store URL to open after login
-      deeplinkingUrl = targetUrl;
-      console.log('Stored URL to open on launch:', deeplinkingUrl);
+      return `${config.GOICON_API_URL}${path}${parsed.search || ''}${parsed.hash || ''}`;
+    } catch (error) {
+      console.warn('Failed to parse deep link:', rawUrl, error);
+      return null;
     }
   }
+  return null;
+};
+
+// Handle URLs from custom scheme and GoIcon domains.
+function handleDeepLink(url) {
+  console.log('Deep link received:', url);
+  const targetUrl = normalizeDeepLinkUrl(url);
+  if (!targetUrl) {
+    return;
+  }
+
+  console.log('Opening URL:', targetUrl);
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // App is running, navigate to URL
+    try {
+      mainWindow.loadURL(targetUrl);
+      mainWindow.show();
+      mainWindow.focus();
+    } catch (err) {
+      console.error('Error loading deep link in main window:', err);
+    }
+  } else if (loginWindow && !loginWindow.isDestroyed()) {
+    // Login window is open, store URL to open after login
+    deeplinkingUrl = targetUrl;
+    console.log('Stored URL to open after login:', deeplinkingUrl);
+  } else {
+    // App is starting, store URL to open after login
+    deeplinkingUrl = targetUrl;
+    console.log('Stored URL to open on launch:', deeplinkingUrl);
+  }
+}
+
+try {
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME);
+  } else if (process.platform === 'win32') {
+    app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} catch (error) {
+  console.warn('Failed to register protocol handler:', error.message);
 }
 
 // Make app single instance
@@ -649,7 +684,11 @@ if (!gotTheLock) {
     }
     
     // The commandLine is an array, find the URL
-    const url = commandLine.find(arg => arg.startsWith('https://goicon.com') || arg.startsWith('https://api.goicon.com'));
+    const url = commandLine.find(arg =>
+      arg.startsWith('https://goicon.com') ||
+      arg.startsWith('https://api.goicon.com') ||
+      arg.startsWith(`${DEEP_LINK_SCHEME}://`)
+    );
     if (url) {
       handleDeepLink(url);
     }
@@ -2543,7 +2582,11 @@ app.whenReady().then(async () => {
 
   // Check for URL on launch (Windows)
   if (process.platform === 'win32') {
-    const url = process.argv.find(arg => arg.startsWith('https://goicon.com') || arg.startsWith('https://api.goicon.com'));
+    const url = process.argv.find(arg =>
+      arg.startsWith('https://goicon.com') ||
+      arg.startsWith('https://api.goicon.com') ||
+      arg.startsWith(`${DEEP_LINK_SCHEME}://`)
+    );
     if (url) {
       handleDeepLink(url);
     }
