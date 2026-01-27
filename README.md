@@ -1,6 +1,12 @@
 # Truespan Desktop App
 
-A desktop wrapper application for the Truespan web application with custom authentication and "Remember Me" functionality.
+Desktop wrapper for the Go Icon web app with Truespan branding, custom auth, and auto-updates.
+
+## Overview
+
+- **Platform:** Electron (Windows + macOS)
+- **Purpose:** Wraps `goicon.com` with native features and update delivery
+- **Update feed:** GitHub Releases (electron-updater) (Required Repo Set to Public)
 
 ## GitHub Actions Release Updates
 
@@ -49,6 +55,53 @@ git push && git push --tags
 You can also run the workflow manually and toggle Windows signing:
 `Actions → Create Release → Run workflow → sign_windows`.
 
+**Note:** A normal `git push` does not trigger builds. Only version tags (`v*`) or manual runs do.
+
+## Project Structure
+
+- `src/` — Electron main + preload code
+- `assets/` — icons and branding
+- `build/` — signing configs and platform packaging
+- `scripts/` — build/sign helpers
+- `docs/` — operational docs
+
+## Windows App Links (https://goicon.com → app)
+
+Windows `https://` links require an **AppX/MSIX** package (NSIS `.exe` does not support App Links).
+
+1. Build and sign AppX:
+```bash
+npm run build:win:appx
+```
+2. Provide AppX signing inputs (either option):
+   - `APPX_CERT_THUMBPRINT` (cert in Windows cert store), or
+   - `APPX_CERT_PATH` (+ optional `APPX_CERT_PASSWORD`)
+3. Host `windows-app-web-link` at:
+   - `https://goicon.com/.well-known/windows-app-web-link`
+   - `https://api.goicon.com/.well-known/windows-app-web-link`
+
+See `docs/WINDOWS_APP_LINKS.md` for details.
+
+## macOS Universal Links
+
+macOS `https://` links require:
+- App entitlements with `applinks:` domains
+- AASA files hosted at `/.well-known/apple-app-site-association`
+- A fresh notarized build after entitlement changes
+
+See `docs/UPDATE_CUTOVER.md` and `build/entitlements.mac.plist`.
+
+## Deep Links
+
+- Custom scheme: `goicon://...` (works after install on both platforms)
+- Web links: `https://goicon.com/...` (macOS via Universal Links, Windows via App Links + MSIX)
+
+## Auto-Update Assets (Required)
+
+Each release must include:
+- Windows: `latest.yml`, `*.exe`, `*.blockmap`
+- macOS: `latest-mac.yml`, `*-mac.zip`, `*.blockmap`, `*.dmg`
+
 ## Docs
 
 - `docs/AUTO_UPDATE_SETUP.md`
@@ -57,3 +110,4 @@ You can also run the workflow manually and toggle Windows signing:
 - `docs/MAC_BUILD_QUICKSTART.md`
 - `docs/MAC_TROUBLESHOOTING.md`
 - `docs/ENTITLEMENTS_FIX_SUMMARY.md`
+- `docs/WINDOWS_APP_LINKS.md`
