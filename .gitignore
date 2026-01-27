@@ -8,6 +8,7 @@ yarn-error.log*
 dist/
 build/
 !build/entitlements.mac.plist
+!build/appx.json
 
 # OS generated files
 .DS_Store
