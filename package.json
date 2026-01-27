@@ -12,7 +12,7 @@
     "dev": "electron . --dev",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
-    "build:win:appx": "electron-builder --win appx --config build/appx.json",
+    "build:win:appx": "electron-builder --win appx --config build/appx.json && node scripts/sign-appx.js",
     "build:mac": "electron-builder --mac",
     "dist": "electron-builder --publish=never",
     "publish": "electron-builder --publish=always",
