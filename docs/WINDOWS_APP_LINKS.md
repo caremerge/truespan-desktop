@@ -10,6 +10,17 @@ Windows App Links require an MSIX/AppX package. The NSIS installer cannot claim 
 - Build the package:
   - `npm run build:win:appx`
 
+### 1a) Sign the AppX (required for end users)
+Unsigned AppX packages only install on developer machines.
+
+The build script can sign automatically if you set one of:
+- `APPX_CERT_THUMBPRINT` (certificate in Windows cert store)
+- `APPX_CERT_PATH` (+ optional `APPX_CERT_PASSWORD`)
+
+Optional:
+- `SIGNTOOL_PATH` (if `signtool.exe` is not on PATH)
+- `APPX_TIMESTAMP_URL` (timestamp server)
+
 ### 2) Install the AppX/MSIX and get the Package Family Name
 After installing, run in PowerShell:
 ```
