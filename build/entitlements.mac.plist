@@ -10,7 +10,6 @@
     <true/>
     <key>com.apple.developer.associated-domains</key>
     <array>
-      <string>applinks:goicon.com</string>
       <string>applinks:api.goicon.com</string>
     </array>
   </dict>
