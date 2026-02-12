@@ -6,8 +6,9 @@ yarn-error.log*
 
 # Build outputs
 dist/
-build/
+build/*
 !build/entitlements.mac.plist
+!build/entitlements.mac.inherit.plist
 !build/appx.json
 
 # OS generated files
