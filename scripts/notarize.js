@@ -4,6 +4,7 @@ exports.default = async function notarizing(context) {
   // Dynamic import for ES module compatibility
   const { notarize } = await import('@electron/notarize');
   const { electronPlatformName, appOutDir } = context;
+  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
   
   // Only notarize on macOS
   if (electronPlatformName !== 'darwin') {
@@ -23,6 +24,9 @@ exports.default = async function notarizing(context) {
     console.log('   APPLE_ID=your@email.com');
     console.log('   APPLE_APP_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx');
     console.log('   APPLE_TEAM_ID=XXXXXXXXXX\n');
+    if (isCI) {
+      throw new Error('Notarization credentials are missing in CI. Refusing to publish a non-notarized macOS build.');
+    }
     return;
   }
 
@@ -80,9 +84,11 @@ exports.default = async function notarizing(context) {
   } catch (error) {
     console.error('\n❌ Notarization failed:');
     console.error('   Error:', error.message);
+    if (isCI) {
+      throw error;
+    }
     console.error('\n⚠️  Continuing without notarization...');
     console.error('   App is signed but users may see a warning on first launch\n');
-    // Don't throw - allow build to continue
   }
 };
 

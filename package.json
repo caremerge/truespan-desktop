@@ -70,7 +70,7 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "type": "distribution",
       "identity": "Go Icon LLC",
       "notarize": {
@@ -92,7 +92,7 @@
     },
     "afterSign": "scripts/notarize.js",
     "dmg": {
-      "sign": false,
+      "sign": true,
       "title": "Truespan Neighborhood ${version}",
       "icon": "assets/icon.png",
       "background": null,
