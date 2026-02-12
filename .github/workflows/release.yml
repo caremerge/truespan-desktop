@@ -5,11 +5,6 @@ on:
     tags:
       - 'v*'  # Trigger on version tags like v1.0.0
   workflow_dispatch:  # Allow manual trigger
-    inputs:
-      sign_windows:
-        description: 'Enable Windows e-signing (eSigner)'
-        required: false
-        default: 'true'
 
 permissions:
   contents: write  # Allow creating releases and uploading assets
@@ -46,12 +41,13 @@ jobs:
             
             ### Downloads
             - **macOS** (Universal - Intel & Apple Silicon): `Truespan Neighborhood-${{ steps.get_version.outputs.version }}-universal.dmg`
-            - **Windows**: `Truespan Neighborhood Setup ${{ steps.get_version.outputs.version }}.exe`
+            - **Windows**: Available via the [Microsoft Store](https://apps.microsoft.com/) or download `Truespan-Neighborhood-${{ steps.get_version.outputs.version }}.appx`
             
             ### Changes
             - ✅ Cross-platform desktop application
-            - ✅ Properly signed and notarized
-            - ✅ Universal macOS binary
+            - ✅ macOS: Properly signed and notarized
+            - ✅ macOS: Universal binary (Intel & Apple Silicon)
+            - ✅ Windows: Distributed via Microsoft Store
             
             ### Installation
             
@@ -61,9 +57,8 @@ jobs:
             3. First launch: Right-click → Open (to bypass Gatekeeper)
             
             **Windows:**
-            1. Download the Setup.exe file
-            2. Run the installer
-            3. Follow installation wizard
+            1. Install from the Microsoft Store (recommended)
+            2. Or download the `.appx` file and double-click to install
           draft: false
           prerelease: false
 
@@ -201,80 +196,35 @@ jobs:
   build-windows:
     needs: create-release
     runs-on: windows-latest
-    env:
-      LEGACY_RELEASE_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
-      LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
-      SIGN_WINDOWS: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.sign_windows == 'true' }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install dependencies
         run: npm ci
-      
-      - name: Setup eSigner credentials
-        if: env.SIGN_WINDOWS == 'true'
-        run: |
-          echo "ESIGNER_USERNAME=${{ secrets.ESIGNER_USERNAME }}" >> $env:GITHUB_ENV
-          echo "ESIGNER_PASSWORD=${{ secrets.ESIGNER_PASSWORD }}" >> $env:GITHUB_ENV
-          echo "ESIGNER_CREDENTIAL_ID=${{ secrets.ESIGNER_CREDENTIAL_ID }}" >> $env:GITHUB_ENV
-          echo "ESIGNER_TOTP_SECRET=${{ secrets.ESIGNER_TOTP_SECRET }}" >> $env:GITHUB_ENV
 
-      - name: Download CodeSignTool (eSigner)
-        if: env.SIGN_WINDOWS == 'true'
-        shell: pwsh
-        run: |
-          $toolDir = Join-Path $env:RUNNER_TEMP "CodeSignTool"
-          New-Item -ItemType Directory -Force -Path $toolDir | Out-Null
-          $zipPath = Join-Path $env:RUNNER_TEMP "CodeSignTool.zip"
-          Invoke-WebRequest -Uri "https://app.esigner.com/files/CodeSignTool-v1-3-2-windows/3954004a/download" -OutFile $zipPath
-          Expand-Archive -Path $zipPath -DestinationPath $toolDir -Force
-          $bat = Get-ChildItem -Path $toolDir -Recurse -Filter "CodeSignTool.bat" | Select-Object -First 1
-          if (-not $bat) {
-            Write-Error "CodeSignTool.bat not found after extraction."
-            exit 1
-          }
-          "CODESIGNTOOL_DIR=$($bat.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-      
-      - name: Build Windows app
-        env:
-          SKIP_SIGNING: ${{ env.SIGN_WINDOWS == 'true' && '0' || '1' }}
+      - name: Build Windows AppX
         run: npm run build:win
 
-      - name: Locate Windows installer
-        id: find_windows_installer
+      - name: Locate AppX
+        id: find_appx
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path dist -Filter "*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            Write-Error "Windows installer not found in dist/"
-            exit 1
-          }
-          "installer_path=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-      
-      - name: Upload Windows Installer to Release
+          $appx = Get-ChildItem -Path dist -Filter "*.appx" | Select-Object -First 1
+          if (-not $appx) { Write-Error "AppX not found in dist/"; exit 1 }
+          "appx_path=$($appx.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload AppX to Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ steps.find_windows_installer.outputs.installer_path }}
-          asset_name: Truespan-Neighborhood-Setup-${{ needs.create-release.outputs.version }}.exe
-          asset_content_type: application/x-msdownload
-
-      - name: Upload Windows Installer to legacy release (optional)
-        if: ${{ env.LEGACY_RELEASE_TOKEN != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.LEGACY_RELEASE_TOKEN }}
-          LEGACY_RELEASE_REPO: ${{ secrets.LEGACY_RELEASE_REPO }}
-        shell: pwsh
-        run: |
-          $tag = "${{ needs.create-release.outputs.version }}"
-          $legacyRepo = if ($env:LEGACY_RELEASE_REPO) { $env:LEGACY_RELEASE_REPO } else { "ryangalea23/truespan" }
-          gh release upload $tag "${{ steps.find_windows_installer.outputs.installer_path }}" `
-            --repo $legacyRepo --clobber
+          asset_path: ${{ steps.find_appx.outputs.appx_path }}
+          asset_name: Truespan-Neighborhood-${{ needs.create-release.outputs.version }}.appx
+          asset_content_type: application/vnd.ms-appx
 

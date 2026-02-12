@@ -442,24 +442,31 @@ const showUpdateStatus =
   hasArg('show-update-status') ||
   !!localUpdateUrl ||
   forceUpdateCheck;
-autoUpdater.autoDownload = true; // Auto-download updates immediately
-autoUpdater.autoInstallOnAppQuit = true;
-if (isDev) {
-  // Allow dev builds to use a local update feed for testing.
-  autoUpdater.forceDevUpdateConfig = true;
-}
-if (localUpdateUrl) {
-  try {
-    autoUpdater.setFeedURL({ provider: 'generic', url: localUpdateUrl });
-    console.log('Using local update feed:', localUpdateUrl);
-  } catch (error) {
-    console.warn('Could not set local update feed:', error.message);
-  }
-}
+// Windows Store (AppX) apps receive updates through the Store itself.
+const isWindowsStore = process.windowsStore === true;
 
-// Log updater events
-autoUpdater.logger = require('electron-log');
-autoUpdater.logger.transports.file.level = 'info';
+if (isWindowsStore) {
+  console.log('Running as Windows Store app -- updates managed by the Store.');
+} else {
+  autoUpdater.autoDownload = true; // Auto-download updates immediately
+  autoUpdater.autoInstallOnAppQuit = true;
+  if (isDev) {
+    // Allow dev builds to use a local update feed for testing.
+    autoUpdater.forceDevUpdateConfig = true;
+  }
+  if (localUpdateUrl) {
+    try {
+      autoUpdater.setFeedURL({ provider: 'generic', url: localUpdateUrl });
+      console.log('Using local update feed:', localUpdateUrl);
+    } catch (error) {
+      console.warn('Could not set local update feed:', error.message);
+    }
+  }
+
+  // Log updater events
+  autoUpdater.logger = require('electron-log');
+  autoUpdater.logger.transports.file.level = 'info';
+}
 
 // Ensure cache path is writable to avoid cache move errors on Windows
 try {
@@ -500,7 +507,8 @@ app.on('quit', (event, exitCode) => {
 
 console.log('App starting... isDev:', isDev);
 console.log('App version:', app.getVersion());
-if (isDev) {
+console.log('Windows Store app:', isWindowsStore);
+if (isDev && !isWindowsStore) {
   console.log('Dev update config forced:', autoUpdater.forceDevUpdateConfig);
   console.log('Local update URL:', localUpdateUrl || '(not set)');
   console.log('Force update check:', forceUpdateCheck);
@@ -531,6 +539,9 @@ const emitUpdateStatus = (status, details) => {
 };
 
 ipcMain.handle('check-for-updates', async () => {
+  if (isWindowsStore) {
+    return { info: 'Updates managed by the Microsoft Store.' };
+  }
   try {
     emitUpdateStatus('checking-for-update');
     return await autoUpdater.checkForUpdates();
@@ -541,66 +552,68 @@ ipcMain.handle('check-for-updates', async () => {
   }
 });
 
-// Auto-updater event handlers
-autoUpdater.on('checking-for-update', () => {
-  console.log('Checking for updates...');
-  emitUpdateStatus('checking-for-update');
-});
+// Auto-updater event handlers (skipped for Windows Store builds)
+if (!isWindowsStore) {
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for updates...');
+    emitUpdateStatus('checking-for-update');
+  });
 
-autoUpdater.on('update-available', (info) => {
-  console.log('Update available:', info.version);
-  emitUpdateStatus('update-available', info.version);
-  
-  // Auto-download immediately without user prompt
-        autoUpdater.downloadUpdate();
-});
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version);
+    emitUpdateStatus('update-available', info.version);
+    
+    // Auto-download immediately without user prompt
+    autoUpdater.downloadUpdate();
+  });
 
-autoUpdater.on('update-not-available', (info) => {
-  console.log('Update not available. Current version is the latest.');
-  emitUpdateStatus('update-not-available', info.version);
-});
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('Update not available. Current version is the latest.');
+    emitUpdateStatus('update-not-available', info.version);
+  });
 
-autoUpdater.on('download-progress', (progressObj) => {
-  let log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
-  console.log(log_message);
-  emitUpdateStatus('download-progress', `${Math.round(progressObj.percent)}%`);
-});
+  autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+    console.log(log_message);
+    emitUpdateStatus('download-progress', `${Math.round(progressObj.percent)}%`);
+  });
 
-autoUpdater.on('update-downloaded', (info) => {
-  console.log('Update downloaded:', info.version);
-  emitUpdateStatus('update-downloaded', info.version);
-  
-  const window = mainWindow || loginWindow;
-  if (window && !window.isDestroyed()) {
-    dialog.showMessageBox(window, {
-      type: 'info',
-      title: 'Update Ready',
-      message: 'Update has been downloaded successfully!',
-      detail: 'The app will restart to install the update. All your work will be saved.',
-      buttons: ['Restart Now', 'Restart Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then((result) => {
-      if (result.response === 0) {
-        // Close windows gracefully before updating
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.removeAllListeners('close');
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version);
+    emitUpdateStatus('update-downloaded', info.version);
+    
+    const window = mainWindow || loginWindow;
+    if (window && !window.isDestroyed()) {
+      dialog.showMessageBox(window, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'Update has been downloaded successfully!',
+        detail: 'The app will restart to install the update. All your work will be saved.',
+        buttons: ['Restart Now', 'Restart Later'],
+        defaultId: 0,
+        cancelId: 1
+      }).then((result) => {
+        if (result.response === 0) {
+          // Close windows gracefully before updating
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.removeAllListeners('close');
+          }
+          if (loginWindow && !loginWindow.isDestroyed()) {
+            loginWindow.removeAllListeners('close');
+          }
+          
+          setImmediate(() => autoUpdater.quitAndInstall(false, true));
         }
-        if (loginWindow && !loginWindow.isDestroyed()) {
-          loginWindow.removeAllListeners('close');
-        }
-        
-        setImmediate(() => autoUpdater.quitAndInstall(false, true));
-      }
-    });
-  }
-});
+      });
+    }
+  });
 
-autoUpdater.on('error', (err) => {
-  console.error('Auto-updater error:', err);
-  // Don't show error dialog to users unless they explicitly checked for updates
-  emitUpdateStatus('error', err.message || 'Unknown error');
-});
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-updater error:', err);
+    // Don't show error dialog to users unless they explicitly checked for updates
+    emitUpdateStatus('error', err.message || 'Unknown error');
+  });
+}
 
 const DEEP_LINK_SCHEME = 'goicon';
 
@@ -2605,8 +2618,8 @@ app.whenReady().then(async () => {
   // Show login window (with or without stored credentials)
   createLoginWindow();
   
-  // Check for updates after login window is ready
-  const shouldCheckUpdates = !isDev || !!localUpdateUrl || forceUpdateCheck;
+  // Check for updates after login window is ready (skip for Windows Store builds)
+  const shouldCheckUpdates = !isWindowsStore && (!isDev || !!localUpdateUrl || forceUpdateCheck);
   if (shouldCheckUpdates) {
     setTimeout(() => {
       console.log('Checking for app updates...');
@@ -2614,6 +2627,8 @@ app.whenReady().then(async () => {
         console.log('Could not check for updates:', err.message);
       });
     }, 5000); // Wait 5 seconds after app starts
+  } else if (isWindowsStore) {
+    console.log('Skipping update check (Windows Store manages updates).');
   } else {
     console.log('Skipping update check (dev mode without local feed).');
   }
