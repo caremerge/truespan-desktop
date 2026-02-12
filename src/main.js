@@ -2615,6 +2615,37 @@ app.whenReady().then(async () => {
     }
   }
   
+  // Prompt legacy Windows users (non-Store NSIS installs) to migrate to the Microsoft Store.
+  if (process.platform === 'win32' && !isWindowsStore) {
+    const MIGRATION_KEY = 'store-migration-dismissed';
+    let dismissed = false;
+    if (keytar) {
+      try {
+        dismissed = (await keytar.getPassword(SERVICE_NAME, MIGRATION_KEY)) === 'true';
+      } catch (_) { /* ignore */ }
+    }
+    if (!dismissed) {
+      const STORE_URL = 'ms-windows-store://pdp/?productid=9P1234CHANGE'; // TODO: Replace with actual Store product ID after first publish
+      const result = await dialog.showMessageBox({
+        type: 'info',
+        title: 'Truespan Neighborhood Has Moved',
+        message: 'Truespan Neighborhood is now available on the Microsoft Store!',
+        detail: 'The Store version receives automatic updates and is the recommended way to run this app.\n\nWould you like to open the Microsoft Store to install it? You can uninstall this version afterwards.',
+        buttons: ['Open Microsoft Store', 'Remind Me Later', 'Don\'t Show Again'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (result.response === 0) {
+        const { shell } = require('electron');
+        shell.openExternal(STORE_URL);
+      } else if (result.response === 2 && keytar) {
+        try {
+          await keytar.setPassword(SERVICE_NAME, MIGRATION_KEY, 'true');
+        } catch (_) { /* ignore */ }
+      }
+    }
+  }
+
   // Show login window (with or without stored credentials)
   createLoginWindow();
   
