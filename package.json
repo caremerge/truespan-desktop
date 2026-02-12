@@ -12,7 +12,6 @@
     "dev": "electron . --dev",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
-    "build:win:appx": "electron-builder --win appx --config build/appx.json && node scripts/sign-appx.js",
     "build:mac": "electron-builder --mac",
     "dist": "electron-builder --publish=never",
     "publish": "electron-builder --publish=always",
@@ -41,13 +40,15 @@
       "node_modules/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico",
-      "signingHashAlgorithms": [
-        "sha256"
-      ],
-      "signDlls": true,
-      "sign": "./sign.js"
+      "target": "appx",
+      "icon": "assets/icon.ico"
+    },
+    "appx": {
+      "applicationId": "TruespanNeighborhood",
+      "identityName": "GoIcon.TruespanNeighborhood",
+      "publisher": "CN=0615E2C2-9EA4-4EE6-BB49-33F2E386CF25",
+      "displayName": "Truespan Neighborhood",
+      "publisherDisplayName": "VoiceFriend, LLC"
     },
     "mac": {
       "target": [
@@ -121,15 +122,13 @@
         ]
       }
     ],
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+    "artifactName": "Truespan-Neighborhood-${version}.${ext}"
   },
   "devDependencies": {
     "@electron/notarize": "^3.1.0",
     "electron": "^27.0.0",
-    "electron-builder": "^24.6.4"
+    "electron-builder": "^24.6.4",
+    "sharp": "^0.34.5"
   },
   "dependencies": {
     "electron-log": "^5.0.0",
