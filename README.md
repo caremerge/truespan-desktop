@@ -88,10 +88,11 @@ Commit and push the version bump before tagging.
 
 ### Configuration
 
-- **macOS entitlements:** `build/entitlements.mac.plist` — declares `applinks:api.goicon.com`
+- **macOS entitlements:** `build/entitlements.mac.plist` (main app, includes Associated Domains) + `build/entitlements.mac.inherit.plist` (helper processes, minimal)
 - **AASA file:** Hosted at `https://api.goicon.com/.well-known/apple-app-site-association`
-  - App ID: `C42TKCA35H.com.goicon.truespan.desktop`
+  - App ID: `C42TKCA35H.com.truespanliving.desktop`
   - Paths: `/social/*`, `/facilities/*/social/*`
+- **Important:** Enable Associated Domains capability for App ID `com.truespanliving.desktop` in Apple Developer, then keep `applinks:api.goicon.com` in the main app entitlement file.
 - **Windows app web link:** Hosted at `https://api.goicon.com/.well-known/windows-app-web-link`
   - Package family name: `GoIcon.TruespanNeighborhood_t99k7bkaz0ett`
 
