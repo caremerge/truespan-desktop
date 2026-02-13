@@ -444,11 +444,18 @@ const isDev =
   !app.isPackaged ||
   process.env.NODE_ENV === 'development' ||
   process.argv.includes('--dev');
+// macOS cloud/virtualized environments frequently render a blank white window with GPU enabled.
+// Default to software rendering on macOS; allow explicit opt-in via ENABLE_GPU=1.
 const shouldDisableGpu =
-  process.env.DISABLE_GPU === '1' || process.argv.includes('--disable-gpu');
+  process.env.DISABLE_GPU === '1' ||
+  process.argv.includes('--disable-gpu') ||
+  (process.platform === 'darwin' && process.env.ENABLE_GPU !== '1');
 if (shouldDisableGpu) {
   app.disableHardwareAcceleration();
-  console.log('Hardware acceleration disabled (DISABLE_GPU=1).');
+  const reason = process.platform === 'darwin' && process.env.ENABLE_GPU !== '1'
+    ? 'default macOS safety mode'
+    : 'DISABLE_GPU=1';
+  console.log(`Hardware acceleration disabled (${reason}).`);
 }
 const getArgValue = (name) => {
   const prefix = `--${name}=`;
