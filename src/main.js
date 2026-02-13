@@ -25,6 +25,29 @@ const windowHistories = new Map();
 const backButtonAttached = new Set();
 const enhancedWebContents = new Set();
 const mainWindowHistory = [];
+const IGNORED_DID_FAIL_LOAD_ERROR_CODES = new Set([-3]); // ERR_ABORTED during redirects
+
+function showLoadErrorPage(targetWindow, contextLabel, validatedURL, errorCode, errorDescription) {
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return;
+  }
+  const safeUrl = validatedURL || '(unknown)';
+  const safeDescription = errorDescription || 'Unknown error';
+  const html = `
+    <html>
+      <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;background:#f8fafc;color:#0f172a;">
+        <h2 style="margin:0 0 10px 0;">Unable to load ${contextLabel}</h2>
+        <p style="margin:0 0 8px 0;">Please check your network connection and try again.</p>
+        <p style="margin:0 0 4px 0;"><strong>URL:</strong> ${safeUrl}</p>
+        <p style="margin:0 0 16px 0;"><strong>Error:</strong> ${safeDescription} (${errorCode})</p>
+        <button onclick="location.reload()" style="padding:8px 12px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;">Retry</button>
+      </body>
+    </html>
+  `;
+  targetWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch((error) => {
+    console.error(`Failed to show ${contextLabel} load error page:`, error);
+  });
+}
 
 function registerDocumentStartScript(targetWebContents, source) {
   if (!targetWebContents || targetWebContents.isDestroyed()) {
@@ -1157,12 +1180,16 @@ function createLoginWindow() {
     }
   });
 
-  loginWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+  loginWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, _isMainFrame) => {
+    if (IGNORED_DID_FAIL_LOAD_ERROR_CODES.has(errorCode)) {
+      return;
+    }
     console.error('Login window failed to load:', { errorCode, errorDescription, validatedURL });
     if (loginWindow && !loginWindow.isDestroyed() && !loginWindow.isVisible()) {
       loginWindow.show();
       loginWindow.focus();
     }
+    showLoadErrorPage(loginWindow, 'login page', validatedURL, errorCode, errorDescription);
   });
 
   // handlers are attached via attachGoiconLoginHandlers
@@ -1238,12 +1265,16 @@ function createLoginWindowWithError(errorMessage) {
     }
   });
 
-  loginWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+  loginWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, _isMainFrame) => {
+    if (IGNORED_DID_FAIL_LOAD_ERROR_CODES.has(errorCode)) {
+      return;
+    }
     console.error('Login-with-error window failed to load:', { errorCode, errorDescription, validatedURL });
     if (loginWindow && !loginWindow.isDestroyed() && !loginWindow.isVisible()) {
       loginWindow.show();
       loginWindow.focus();
     }
+    showLoadErrorPage(loginWindow, 'login page', validatedURL, errorCode, errorDescription);
   });
 
   loginWindow.on('closed', () => {
@@ -1355,12 +1386,16 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
     }
   });
 
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, _isMainFrame) => {
+    if (IGNORED_DID_FAIL_LOAD_ERROR_CODES.has(errorCode)) {
+      return;
+    }
     console.error('Main window failed to load:', { errorCode, errorDescription, validatedURL });
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
       mainWindow.focus();
     }
+    showLoadErrorPage(mainWindow, 'app content', validatedURL, errorCode, errorDescription);
   });
 
   mainWindow.on('closed', () => {
