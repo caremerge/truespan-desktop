@@ -48,7 +48,8 @@
       "identityName": "GoIcon.TruespanNeighborhood",
       "publisher": "CN=0615E2C2-9EA4-4EE6-BB49-33F2E386CF25",
       "displayName": "Truespan Neighborhood",
-      "publisherDisplayName": "VoiceFriend, LLC"
+      "publisherDisplayName": "VoiceFriend, LLC",
+      "backgroundColor": "transparent"
     },
     "mac": {
       "target": [

@@ -125,6 +125,12 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           
           rm certificate.p12
+
+      - name: Decode provisioning profile
+        shell: bash
+        run: |
+          mkdir -p build
+          echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > build/DeveloperID.provisionprofile
       
       - name: Build and sign macOS app
         env:
