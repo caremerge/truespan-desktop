@@ -24,6 +24,7 @@ let lastUpdateStatusAt = 0;
 const windowHistories = new Map();
 const backButtonAttached = new Set();
 const enhancedWebContents = new Set();
+const mainWindowHistory = [];
 
 function registerDocumentStartScript(targetWebContents, source) {
   if (!targetWebContents || targetWebContents.isDestroyed()) {
@@ -1140,9 +1141,27 @@ function createLoginWindow() {
     loginWindow.loadFile('src/login.html');
   }
 
+  // Fallback: force-show window if ready-to-show never fires.
+  const loginWindowShowFallback = setTimeout(() => {
+    if (loginWindow && !loginWindow.isDestroyed() && !loginWindow.isVisible()) {
+      console.warn('Login window fallback show triggered');
+      loginWindow.show();
+      loginWindow.focus();
+    }
+  }, 8000);
+
   loginWindow.once('ready-to-show', () => {
+    clearTimeout(loginWindowShowFallback);
     if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.show();
+    }
+  });
+
+  loginWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('Login window failed to load:', { errorCode, errorDescription, validatedURL });
+    if (loginWindow && !loginWindow.isDestroyed() && !loginWindow.isVisible()) {
+      loginWindow.show();
+      loginWindow.focus();
     }
   });
 
@@ -1187,7 +1206,16 @@ function createLoginWindowWithError(errorMessage) {
     loginWindow.loadFile('src/login.html');
   }
 
+  const loginWindowShowFallback = setTimeout(() => {
+    if (loginWindow && !loginWindow.isDestroyed() && !loginWindow.isVisible()) {
+      console.warn('Login-with-error window fallback show triggered');
+      loginWindow.show();
+      loginWindow.focus();
+    }
+  }, 8000);
+
   loginWindow.once('ready-to-show', () => {
+    clearTimeout(loginWindowShowFallback);
     if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.show();
       
@@ -1207,6 +1235,14 @@ function createLoginWindowWithError(errorMessage) {
           }
         }, 500);
       }
+    }
+  });
+
+  loginWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('Login-with-error window failed to load:', { errorCode, errorDescription, validatedURL });
+    if (loginWindow && !loginWindow.isDestroyed() && !loginWindow.isVisible()) {
+      loginWindow.show();
+      loginWindow.focus();
     }
   });
 
@@ -1239,6 +1275,14 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
   // Load the target URL (either redirect URL or default website)
   console.log('Loading main window with URL:', targetUrl);
   mainWindow.loadURL(targetUrl);
+
+  const mainWindowShowFallback = setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      console.warn('Main window fallback show triggered');
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }, 8000);
 
   mainWindow.webContents.on('did-finish-load', () => {
     // Check if window still exists (race condition protection)
@@ -1301,12 +1345,21 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
   });
 
   mainWindow.once('ready-to-show', () => {
+    clearTimeout(mainWindowShowFallback);
     // Check if window still exists (race condition protection)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
     }
     if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.close();
+    }
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('Main window failed to load:', { errorCode, errorDescription, validatedURL });
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 
