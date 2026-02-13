@@ -49,6 +49,40 @@ function showLoadErrorPage(targetWindow, contextLabel, validatedURL, errorCode, 
   });
 }
 
+function attachInitialLoadWatchdog(targetWindow, contextLabel, targetUrl, timeoutMs = 20000) {
+  if (!targetWindow || targetWindow.isDestroyed() || !targetWindow.webContents) {
+    return;
+  }
+  let finished = false;
+  let timeoutId = null;
+  const wc = targetWindow.webContents;
+
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  wc.once('did-finish-load', finish);
+  wc.once('did-fail-load', () => finish());
+  wc.once('render-process-gone', (_event, details) => {
+    finish();
+    const reason = details && details.reason ? details.reason : 'render-process-gone';
+    const code = details && typeof details.exitCode === 'number' ? details.exitCode : 'N/A';
+    showLoadErrorPage(targetWindow, contextLabel, targetUrl, `RENDER_${reason}`, `Renderer exited (${code})`);
+  });
+
+  timeoutId = setTimeout(() => {
+    if (finished) {
+      return;
+    }
+    showLoadErrorPage(targetWindow, contextLabel, targetUrl, 'TIMEOUT', 'Initial page load timed out');
+  }, timeoutMs);
+}
+
 function registerDocumentStartScript(targetWebContents, source) {
   if (!targetWebContents || targetWebContents.isDestroyed()) {
     return;
@@ -1166,7 +1200,9 @@ function createLoginWindow() {
 
   if (USE_GOICON_LOGIN) {
     attachGoiconLoginHandlers(loginWindow);
-    loginWindow.loadURL(`${config.GOICON_LOGIN_URL}/login/`);
+    const loginUrl = `${config.GOICON_LOGIN_URL}/login/`;
+    attachInitialLoadWatchdog(loginWindow, 'login page', loginUrl);
+    loginWindow.loadURL(loginUrl);
   } else {
     loginWindow.loadFile('src/login.html');
   }
@@ -1235,7 +1271,9 @@ function createLoginWindowWithError(errorMessage) {
 
   if (USE_GOICON_LOGIN) {
     attachGoiconLoginHandlers(loginWindow, errorMessage);
-    loginWindow.loadURL(`${config.GOICON_LOGIN_URL}/login/`);
+    const loginUrl = `${config.GOICON_LOGIN_URL}/login/`;
+    attachInitialLoadWatchdog(loginWindow, 'login page', loginUrl);
+    loginWindow.loadURL(loginUrl);
   } else {
     loginWindow.loadFile('src/login.html');
   }
@@ -1312,6 +1350,7 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
 
   // Load the target URL (either redirect URL or default website)
   console.log('Loading main window with URL:', targetUrl);
+  attachInitialLoadWatchdog(mainWindow, 'app content', targetUrl);
   mainWindow.loadURL(targetUrl);
 
   const mainWindowShowFallback = setTimeout(() => {
