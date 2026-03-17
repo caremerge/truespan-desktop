@@ -2759,19 +2759,37 @@ app.whenReady().then(async () => {
       } catch (_) { /* ignore */ }
     }
     if (!dismissed) {
-      const STORE_URL = 'ms-windows-store://pdp/?productid=9P1234CHANGE'; // TODO: Replace with actual Store product ID after first publish
+      const STORE_URL = 'ms-windows-store://pdp/?productid=9NS9B080746M';
       const result = await dialog.showMessageBox({
         type: 'info',
         title: 'Truespan Neighborhood Has Moved',
         message: 'Truespan Neighborhood is now available on the Microsoft Store!',
-        detail: 'The Store version receives automatic updates and is the recommended way to run this app.\n\nWould you like to open the Microsoft Store to install it? You can uninstall this version afterwards.',
-        buttons: ['Open Microsoft Store', 'Remind Me Later', 'Don\'t Show Again'],
+        detail: 'The Store version receives automatic updates and is the recommended way to run this app.\n\nClick "Switch to Store Version" to open the Microsoft Store and automatically uninstall this old version.',
+        buttons: ['Switch to Store Version', 'Remind Me Later', 'Don\'t Show Again'],
         defaultId: 0,
         cancelId: 1,
       });
       if (result.response === 0) {
         const { shell } = require('electron');
+        const { execFile } = require('child_process');
         shell.openExternal(STORE_URL);
+
+        // Find and run the NSIS uninstaller silently.
+        const appDir = path.dirname(process.execPath);
+        const fs = require('fs');
+        const possibleUninstallers = [
+          path.join(appDir, 'Uninstall Truespan Neighborhood.exe'),
+          path.join(appDir, 'uninstall.exe'),
+          path.join(appDir, 'Uninstall.exe'),
+        ];
+        const uninstaller = possibleUninstallers.find(p => fs.existsSync(p));
+        if (uninstaller) {
+          console.log('Running silent uninstall:', uninstaller);
+          execFile(uninstaller, ['/S', '--force-run'], { detached: true, stdio: 'ignore' });
+        } else {
+          console.log('Uninstaller not found, user will need to uninstall manually.');
+        }
+        app.quit();
       } else if (result.response === 2 && keytar) {
         try {
           await keytar.setPassword(SERVICE_NAME, MIGRATION_KEY, 'true');
