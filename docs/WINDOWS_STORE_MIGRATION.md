@@ -30,7 +30,7 @@ Submit the `.appx` to Partner Center and wait for Microsoft to approve it. Once 
 In `src/main.js`, find the migration section and replace the placeholder:
 
 ```javascript
-const STORE_URL = 'ms-windows-store://pdp/?productid=9P1234CHANGE'; // TODO: Replace with actual Store product ID
+const STORE_URL = 'ms-windows-store://pdp/?productid=9NS9B080746M';
 ```
 
 Change `9P1234CHANGE` to your actual product ID (e.g., `9NXXXXXXXX`).
