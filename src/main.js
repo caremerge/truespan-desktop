@@ -1172,6 +1172,23 @@ function attachGoiconLoginHandlers(targetWindow, errorMessage) {
       createMainWindow(targetUrl);
     }
   });
+
+  // Handle window.open() / target="_blank" from the login window.
+  // goicon.com URLs stay in Electron (they may be part of the auth flow).
+  // Everything else goes to the system browser.
+  targetWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log('[setWindowOpenHandler] loginWindow intercepted window.open for URL:', url);
+    if (!url || url === 'about:blank' || url === 'about:blank#blocked') {
+      return { action: 'allow' };
+    }
+    if (url.includes('goicon.com')) {
+      return { action: 'allow' };
+    }
+    require('electron').shell.openExternal(url).catch(err => {
+      console.error('[setWindowOpenHandler] loginWindow shell.openExternal failed:', url, err);
+    });
+    return { action: 'deny' };
+  });
 }
 
 function createLoginWindow() {
@@ -1523,8 +1540,35 @@ function createMainWindow(targetUrl = WEBSITE_URL) {
 
   // Handle external links - open in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    require('electron').shell.openExternal(url);
+    console.log('[setWindowOpenHandler] mainWindow intercepted window.open for URL:', url);
+
+    // Some web apps call window.open('about:blank') or window.open('') first and then
+    // navigate the returned window object to the real URL. Allow those through so the
+    // app can drive the navigation — we'll intercept it in did-create-window below.
+    if (!url || url === 'about:blank' || url === 'about:blank#blocked') {
+      console.log('[setWindowOpenHandler] allowing about:blank window so app can navigate it');
+      return { action: 'allow' };
+    }
+
+    require('electron').shell.openExternal(url).catch(err => {
+      console.error('[setWindowOpenHandler] shell.openExternal failed for URL:', url, err);
+    });
     return { action: 'deny' };
+  });
+
+  // When an about:blank child window is allowed, watch for the app to navigate it to
+  // the real URL and route that URL to the system browser instead.
+  mainWindow.webContents.on('did-create-window', (childWin) => {
+    childWin.webContents.on('will-navigate', (event, navigationUrl) => {
+      if (navigationUrl && navigationUrl !== 'about:blank') {
+        console.log('[did-create-window] child window navigating to:', navigationUrl, '— routing to system browser');
+        event.preventDefault();
+        require('electron').shell.openExternal(navigationUrl).catch(err => {
+          console.error('[did-create-window] shell.openExternal failed:', err);
+        });
+        childWin.close();
+      }
+    });
   });
 }
 
@@ -1683,9 +1727,18 @@ ipcMain.handle('open-forgot-password', async () => {
     console.log('Forgot password window closed');
   });
 
-  // Handle external links - open in default browser
+  // goicon.com links stay in Electron; everything else goes to the system browser
   forgotPasswordWindow.webContents.setWindowOpenHandler(({ url }) => {
-    require('electron').shell.openExternal(url);
+    console.log('[setWindowOpenHandler] forgotPasswordWindow intercepted window.open for URL:', url);
+    if (!url || url === 'about:blank' || url === 'about:blank#blocked') {
+      return { action: 'allow' };
+    }
+    if (url.includes('goicon.com')) {
+      return { action: 'allow' };
+    }
+    require('electron').shell.openExternal(url).catch(err => {
+      console.error('[setWindowOpenHandler] forgotPasswordWindow shell.openExternal failed:', url, err);
+    });
     return { action: 'deny' };
   });
 });
