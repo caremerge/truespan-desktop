@@ -381,6 +381,123 @@ function attachBackButtonHandlers(targetWebContents) {
   });
 }
 
+// macOS Tahoe 26 ships a Chromium/Core Text font-matching regression: when a
+// CSS `font-family` references a font not installed on the system (e.g.
+// "Garamond", which macOS has never shipped natively), Chromium resolves it
+// to `.LastResort` instead of cascading to the next family in the stack,
+// producing tofu/"?" glyphs. Safari/Firefox are unaffected. Our Community
+// Engagement pages contain TinyMCE-authored HTML with inline
+// `font-family: Garamond, serif` declarations, so Mac users see garbled text
+// for those paragraphs. Windows is unaffected (it has these fonts natively).
+//
+// Two mitigations are combined, both macOS-only:
+//
+//   1. For Garamond specifically — the most common offender and a legitimate
+//      design choice in the CMS content — we bundle EB Garamond (SIL OFL) as
+//      a real webfont. The WOFF2 bytes are base64-inlined as `data:` URIs so
+//      the font is same-origin with the remote page and doesn't require a
+//      custom Electron protocol handler or CORS headers. `local()`-based
+//      aliasing was considered but re-enters the same broken font resolver.
+//   2. For every other Windows/Office font likely to appear in CMS content,
+//      an attribute-selector `!important` override rewrites `font-family` on
+//      elements whose inline `style` mentions the broken font, pointing it
+//      at a native-macOS font stack matching the missing font's category.
+//
+// Reads happen once at module load; if the font files are missing the helper
+// returns an empty string and the attribute-selector fallbacks still apply.
+const buildBundledGaramondFaceCSS = () => {
+  try {
+    const fs = require('fs');
+    const fontsDir = path.join(__dirname, '../assets/fonts');
+    const toDataUri = (filename) => {
+      const buffer = fs.readFileSync(path.join(fontsDir, filename));
+      return `data:font/woff2;base64,${buffer.toString('base64')}`;
+    };
+    const regular = toDataUri('EBGaramond-latin-normal.woff2');
+    const italic = toDataUri('EBGaramond-latin-italic.woff2');
+    // EB Garamond v32 is a variable font — one WOFF2 handles the full
+    // 400-700 weight range per style, so each `@font-face` declares a
+    // weight range rather than a single weight value.
+    return `
+@font-face {
+  font-family: 'Garamond';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(${regular}) format('woff2');
+}
+@font-face {
+  font-family: 'Garamond';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(${italic}) format('woff2');
+}`;
+  } catch (error) {
+    console.warn('Failed to load bundled Garamond font:', error.message);
+    return '';
+  }
+};
+
+const BUNDLED_GARAMOND_CSS = buildBundledGaramondFaceCSS();
+
+// For legacy fonts where we don't bundle a webfont, rewrite `font-family` to
+// a stack of fonts native to macOS matching the missing font's visual
+// category (serif / sans / mono). Order by specificity so more specific
+// names match before shorter ones when both appear on one element.
+const LEGACY_FONT_FALLBACKS = [
+  // Serifs
+  { match: 'Book Antiqua',        stack: "Palatino, 'Palatino Linotype', Georgia, 'Times New Roman', Times, serif" },
+  { match: 'Palatino Linotype',   stack: "Palatino, Georgia, 'Times New Roman', Times, serif" },
+  { match: 'Cambria',             stack: "'Hoefler Text', Georgia, 'Times New Roman', Times, serif" },
+  { match: 'Constantia',          stack: "'Hoefler Text', Georgia, 'Times New Roman', Times, serif" },
+  { match: 'Bookman Old Style',   stack: "Georgia, 'Times New Roman', Times, serif" },
+  // Sans-serifs
+  { match: 'Tahoma',              stack: "'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Segoe UI',            stack: "'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Calibri',             stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Candara',             stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Corbel',              stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Arial Narrow',        stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Century Gothic',      stack: "'Avenir Next', Avenir, 'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Franklin Gothic',     stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { match: 'Lucida Sans Unicode', stack: "'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  // Monospaced
+  { match: 'Consolas',            stack: "Menlo, Monaco, 'Courier New', Courier, monospace" },
+  { match: 'Lucida Console',      stack: "Menlo, Monaco, 'Courier New', Courier, monospace" }
+];
+
+const LEGACY_FONT_FALLBACK_CSS = LEGACY_FONT_FALLBACKS
+  .map(({ match, stack }) =>
+    `[style*="${match}" i] { font-family: ${stack} !important; }`
+  )
+  .join('\n');
+
+const MAC_FONT_FALLBACK_CSS = [BUNDLED_GARAMOND_CSS, LEGACY_FONT_FALLBACK_CSS]
+  .filter(Boolean)
+  .join('\n');
+
+function ensureMacFontFallbackCSS(targetWebContents) {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+  if (!targetWebContents || targetWebContents.isDestroyed()) {
+    return;
+  }
+  const inject = () => {
+    if (!targetWebContents || targetWebContents.isDestroyed()) {
+      return;
+    }
+    targetWebContents.insertCSS(MAC_FONT_FALLBACK_CSS).catch(error => {
+      console.warn('Failed to inject macOS font fallback CSS:', error.message);
+    });
+  };
+  // `dom-ready` fires once per document (after DOM parse, before full load)
+  // so the override is applied before first paint and not duplicated across
+  // the did-finish-load / did-navigate pair within the same document.
+  targetWebContents.on('dom-ready', inject);
+}
+
 function initializeWebContentsEnhancements(targetWebContents) {
   if (!targetWebContents || targetWebContents.isDestroyed()) {
     return;
@@ -393,6 +510,7 @@ function initializeWebContentsEnhancements(targetWebContents) {
   installPromiseWithResolversPolyfill(targetWebContents);
   attachBackButtonHandlers(targetWebContents);
   registerFrameNavigationFallback(targetWebContents);
+  ensureMacFontFallbackCSS(targetWebContents);
 
   targetWebContents.on('did-frame-finish-load', (_event, _isMainFrame, frameProcessId, frameRoutingId) => {
     try {
